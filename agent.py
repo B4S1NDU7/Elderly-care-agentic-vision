@@ -145,7 +145,7 @@ class AgenticEngine:
         self,
         potential_exit_analysis: FrameAnalysis,
         all_analyses: List[FrameAnalysis],
-    ) -> Tuple[bool, float, str]:
+    ) -> Tuple[Optional[bool], float, str]:
         """
         Agentic bed exit verification.
         Returns (is_confirmed, confidence, reasoning).
@@ -159,7 +159,7 @@ class AgenticEngine:
         )
 
         if not context_frames:
-            return True, 0.7, "Insufficient context frames for agentic verification"
+            return None, 0.0, "Insufficient context frames to verify a bed exit."
 
         # Build observation list
         observations = [
@@ -186,11 +186,26 @@ class AgenticEngine:
 
         # Parse conclusion
         text_lower = (conclusion + " " + reasoning).lower()
+        negative_evidence = (
+            "not genuine",
+            "not a genuine",
+            "not confirmed",
+            "not an exit",
+            "not a bed exit",
+            "no bed exit",
+            "no genuine exit",
+            "did not leave",
+            "did not exit",
+            "remains in bed",
+            "position adjustment",
+            "adjusting position",
+            "remained on the bed",
+            "returned to bed",
+        )
+        positive_evidence = ("genuine", "confirmed", "bed exit")
         is_exit = (
-            "genuine" in text_lower
-            or "confirmed" in text_lower
-            or "exit" in text_lower
-            and "not" not in text_lower
+            any(phrase in text_lower for phrase in positive_evidence)
+            and not any(phrase in text_lower for phrase in negative_evidence)
         )
 
         decision = AgentDecision(
@@ -260,6 +275,8 @@ class AgenticEngine:
         bed_exit_count: int,
         sitting_on_edge_sec: float,
         recent_timeline: List[Dict],
+        unknown_duration_sec: float = 0.0,
+        fall_suspected: bool = False,
     ) -> Tuple[AlertLevel, str]:
         """
         Determine final alert level using VLM + rules.
@@ -270,6 +287,8 @@ class AgenticEngine:
             out_of_bed_duration_sec=out_of_bed_sec,
             bed_exit_count=bed_exit_count,
             sitting_on_edge_duration_sec=sitting_on_edge_sec,
+            unknown_duration_sec=unknown_duration_sec,
+            fall_suspected=fall_suspected,
         )
 
         alert_str = result.get("alert_level", "NORMAL")

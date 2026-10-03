@@ -265,6 +265,8 @@ class VLMAnalyzer:
         out_of_bed_duration_sec: float,
         bed_exit_count: int,
         sitting_on_edge_duration_sec: float,
+        unknown_duration_sec: float = 0.0,
+        fall_suspected: bool = False,
     ) -> Dict[str, Any]:
         """
         Determine overall alert level using alert rules + VLM reasoning.
@@ -280,6 +282,8 @@ class VLMAnalyzer:
             current_state,
             out_of_bed_duration_sec,
             sitting_on_edge_duration_sec,
+            unknown_duration_sec,
+            fall_suspected,
         )
 
         if self.mock_mode:
@@ -314,6 +318,8 @@ Activity Timeline (last 10 observations):
 Statistics:
 - Current state: {current_state.value}
 - Continuous out-of-bed duration: {out_of_bed_duration_sec:.0f} seconds ({out_of_bed_duration_sec/60:.1f} min)
+- Unknown-state duration: {unknown_duration_sec:.0f} seconds
+- Agentic floor/fall concern: {fall_suspected}
 - Bed exits so far: {bed_exit_count}
 - Time sitting on bed edge: {sitting_on_edge_duration_sec:.0f} seconds
 
@@ -334,6 +340,14 @@ Provide your alert assessment:
         raw = self._call_vlm_text_only(prompt)
         result = self._parse_response(raw)
         result["rule_based_alert"] = rule_alert
+        severity = {"NORMAL": 0, "MONITOR": 1, "ALERT": 2}
+        model_alert = str(result.get("alert_level", "NORMAL")).upper()
+        if severity.get(rule_alert, 0) > severity.get(model_alert, 0):
+            result["alert_level"] = rule_alert
+            result["reasoning"] = (
+                f"Rule-based safety threshold requires {rule_alert}. "
+                f"VLM assessment: {result.get('reasoning', 'No reasoning provided.')}"
+            )
         return result
 
     # ------------------------------------------------------------------
@@ -489,16 +503,20 @@ Provide your alert assessment:
         state: ActivityState,
         out_of_bed_sec: float,
         sitting_edge_sec: float,
+        unknown_duration_sec: float = 0.0,
+        fall_suspected: bool = False,
     ) -> str:
         """Fast rule-based pre-screening."""
         # ALERT conditions
+        if fall_suspected:
+            return "ALERT"
         if out_of_bed_sec > 2700:  # 45 minutes out of bed continuously
             return "ALERT"
 
         # MONITOR conditions
         if sitting_edge_sec > 600:  # 10 minutes on edge
             return "MONITOR"
-        if state == ActivityState.UNKNOWN:
+        if state == ActivityState.UNKNOWN or unknown_duration_sec > 30:
             return "MONITOR"
         if out_of_bed_sec > 1200:  # 20 minutes
             return "MONITOR"
@@ -517,14 +535,14 @@ Provide your alert assessment:
         if frame is not None and frame.size > 0:
             b, g, r = [int(v) for v in frame[10, 10]]
             palette_map = {
-                (60, 30, 20): ("LYING_IN_BED", True, True, "Person is lying horizontally in bed."),
-                (80, 50, 30): ("SITTING_ON_BED", True, True, "Person is sitting upright on the bed."),
-                (100, 80, 60): ("STANDING", False, True, "Person is standing beside the bed."),
-                (120, 100, 80): ("WALKING", False, False, "Person is walking across the room."),
-                (90, 70, 50): ("SITTING_OUTSIDE_BED", False, False, "Person is seated away from the bed."),
+                (20, 20, 60): ("LYING_IN_BED", True, True, "Person is lying horizontally in bed."),
+                (20, 60, 20): ("SITTING_ON_BED", True, True, "Person is sitting upright on the bed."),
+                (60, 20, 20): ("STANDING", False, True, "Person is standing beside the bed."),
+                (20, 100, 150): ("WALKING", False, False, "Person is walking across the room."),
+                (150, 20, 100): ("SITTING_OUTSIDE_BED", False, False, "Person is seated away from the bed."),
             }
             for (pb, pg, pr), (state_name, on_b, near_b, reason) in palette_map.items():
-                if abs(b - pb) < 25 and abs(g - pg) < 25 and abs(r - pr) < 25:
+                if abs(b - pb) < 30 and abs(g - pg) < 30 and abs(r - pr) < 30:
                     return {
                         "state": state_name,
                         "confidence": 0.94,
@@ -618,4 +636,3 @@ Provide your alert assessment:
                 "near_bed": near_bed,
                 "person_visible": True,
             }
-
