@@ -25,70 +25,13 @@ An end-to-end **Agentic AI + Vision** system that continuously monitors an elder
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                   Elderly Care Agentic Vision System                │
-└─────────────────────────────────────────────────────────────────────┘
+![System architecture: sampled video frames flow through optional pose features, VLM classification, temporal agent review, state tracking, safety assessment, and report generation.](./architecture.png)
 
-┌──────────────┐
-│  Video Input │  MP4/AVI video of elderly person's room
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────────┐
-│   Frame Extractor    │  Uniform sampling (every N seconds)
-│  video_extractor.py  │  Uniform temporal sampling
-└──────┬───────────────┘
-       │
-       ├──────────────────────────────┐
-       ▼                              ▼
-┌──────────────────┐      ┌───────────────────────────────┐
-│  Pose Detector   │      │        VLM Analyzer           │
-│ pose_detector.py │      │       vlm_analyzer.py         │
-│                  │      │                               │
-│  YOLOv8n         │─────▶│  GPT-4o Vision                │
-│  (person detect) │      │  Frame image + pose context   │
-│  MediaPipe Pose  │      │  → ActivityState + confidence │
-│  (33 landmarks)  │      └──────────────┬────────────────┘
-└──────────────────┘                     │
-                                         ▼
-                           ┌─────────────────────────────┐
-                           │      Agentic Engine         │
-                           │         agent.py            │
-                           │                             │
-                           │  Ambiguous transition?      │
-                           │  → Gather temporal context  │
-                           │  → Re-query VLM with        │
-                           │    surrounding frames       │
-                           │  Bed exit candidate?        │
-                           │  → Verify with lookback     │
-                           │  Horizontal body?           │
-                           │  → Floor vs. bed check      │
-                           └──────────────┬──────────────┘
-                                          │
-                                          ▼
-                           ┌─────────────────────────────┐
-                           │   Temporal State Tracker    │
-                           │      state_tracker.py       │
-                           │                             │
-                           │  Smoothing window (3 frames)│
-                           │  Valid transition graph     │
-                           │  Segment merging            │
-                           │  Bed event detection        │
-                           └──────────────┬──────────────┘
-                                          │
-                                          ▼
-                           ┌─────────────────────────────┐
-                           │      Report Generator       │
-                           │    report_generator.py      │
-                           │                             │
-                           │  Timeline • Duration summary│
-                           │  Bed events • Alert level   │
-                           │  Evaluation metrics         │
-                           └─────────────────────────────┘
-```
-
-See [architecture.png](./architecture.png) for the architecture diagram.
+The pose branch and bed-region detection are optional (`--no-pose`). Agentic
+review uses surrounding sampled frames to resolve ambiguous transitions and
+bed-exit candidates; the tracker is then rebuilt from the reviewed analyses.
+Ground-truth evaluation runs only when `--gt` is provided. See the detailed
+[architecture diagram](./architecture.png).
 
 ---
 
