@@ -46,11 +46,11 @@ def create_synthetic_video(output_path: str, duration_sec: int = 120, fps: int =
 
     # Color palettes for each state
     state_colors = {
-        "lying_in_bed":         (60, 30, 20),      # dark brown (room at rest)
-        "sitting_on_bed":       (80, 50, 30),
-        "standing":             (100, 80, 60),
-        "walking":              (120, 100, 80),
-        "sitting_outside_bed":  (90, 70, 50),
+        "lying_in_bed":         (20, 20, 60),
+        "sitting_on_bed":       (20, 60, 20),
+        "standing":             (60, 20, 20),
+        "walking":              (20, 100, 150),
+        "sitting_outside_bed":  (150, 20, 100),
     }
 
     # Body representation colors
