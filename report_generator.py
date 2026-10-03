@@ -20,6 +20,7 @@ from models import (
     AnalysisReport, StateSegment, BedEvent, ActivityState,
     AlertLevel, _sec_to_mmss, _sec_to_human, _sec_to_hhmmss
 )
+from evaluation import EvaluationMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -246,13 +247,16 @@ class ReportGenerator:
             return
 
         console.print()
-        console.rule("[bold blue]ELDERLY CARE MONITORING REPORT[/bold blue]")
+        console.rule(
+            "[bold blue]ELDERLY CARE MONITORING REPORT[/bold blue]",
+            characters="-",
+        )
 
         # Alert level banner
         alert_color = ALERT_COLORS.get(report.final_alert.value, "white")
         console.print(Panel(
             f"[{alert_color}]{report.final_alert.value}[/{alert_color}]  "
-            f"— {report.alert_reasoning}",
+            f"- {report.alert_reasoning}",
             title="[bold]Alert Status[/bold]",
             border_style=alert_color.split()[0],
         ))
@@ -322,13 +326,13 @@ class ReportGenerator:
             for ev in report.bed_events:
                 ev_color = "red" if ev.event_type.value == "bed_exit" else "green"
                 console.print(
-                    f"  [{ev_color}]■[/{ev_color}] {ev.event_type.value.upper()} "
+                    f"  [{ev_color}]*[/{ev_color}] {ev.event_type.value.upper()} "
                     f"@ {_sec_to_hhmmss(ev.confirmed_time_sec)} "
-                    f"| {ev.previous_state.value} → {ev.current_state.value} "
+                    f"| {ev.previous_state.value} to {ev.current_state.value} "
                     f"| {ev.decision.value} (conf={ev.confidence:.2f})"
                 )
 
-        console.rule()
+        console.rule(characters="-")
 
     def _print_plain_report(self, report: AnalysisReport):
         """Fallback plain text console report."""
@@ -366,7 +370,9 @@ class ReportGenerator:
         ]
 
         if ground_truth:
-            lines.extend(self._compute_metrics_vs_gt(report, ground_truth))
+            lines.extend(
+                EvaluationMetrics(report, ground_truth).format_report().splitlines()
+            )
         else:
             lines.extend(self._compute_self_metrics(report))
 
@@ -379,41 +385,23 @@ class ReportGenerator:
 
         if RICH_AVAILABLE:
             console.print()
-            console.rule("[bold red]EVALUATION REPORT[/bold red]")
-            console.print(report_text)
+            console.rule("[bold red]EVALUATION REPORT[/bold red]", characters="-")
+            encoding = getattr(console.file, "encoding", None) or "utf-8"
+            ascii_report = (
+                report_text.replace("→", "->")
+                .replace("–", "-")
+                .replace("—", "-")
+            )
+            safe_report = ascii_report.encode(
+                encoding, errors="replace"
+            ).decode(encoding)
+            console.print(safe_report)
 
         return report_text
 
     def _compute_metrics_vs_gt(self, report: AnalysisReport, gt: Dict) -> List[str]:
-        """Compare predicted durations against ground truth."""
-        lines = ["Duration Error Analysis (vs Ground Truth):", "-" * 40]
-        total_error = 0
-        n = 0
-        for state_key, gt_sec in gt.get("activity_duration_sec", {}).items():
-            pred_sec = report.activity_duration_sec.get(state_key, 0)
-            error = abs(pred_sec - gt_sec)
-            total_error += error
-            n += 1
-            lines.append(
-                f"  {state_key:<25} GT={_sec_to_human(gt_sec):>8}  "
-                f"Pred={_sec_to_human(pred_sec):>8}  "
-                f"Error={_sec_to_human(error):>8}"
-            )
-        if n > 0:
-            lines.append(f"\n  Mean Absolute Error: {_sec_to_human(total_error/n)}")
-
-        # Bed event metrics
-        gt_exits = gt.get("bed_exit_count", 0)
-        pred_exits = report.bed_exit_count
-        lines.extend([
-            "",
-            "Bed Event Metrics:",
-            f"  Ground truth bed exits:  {gt_exits}",
-            f"  Predicted bed exits:     {pred_exits}",
-            f"  Precision: {min(pred_exits, gt_exits) / max(pred_exits, 1):.2f}",
-            f"  Recall:    {min(pred_exits, gt_exits) / max(gt_exits, 1):.2f}",
-        ])
-        return lines
+        """Format quantitative metrics against the provided annotations."""
+        return EvaluationMetrics(report, gt).format_report().splitlines()
 
     def _compute_self_metrics(self, report: AnalysisReport) -> List[str]:
         """Self-consistency metrics when no ground truth is available."""
@@ -495,14 +483,15 @@ class ReportGenerator:
                         and curr.duration_sec < 15):
                     case_num += 1
                     lines.extend([
-                        f"Case {case_num}: SPURIOUS STATE OSCILLATION",
+                        f"Case {case_num}: SHORT STATE OSCILLATION (review candidate)",
                         f"  Time: {curr.start_str} – {curr.end_str}",
                         f"  Pattern: {prev.state.value} → {curr.state.value} → {nxt.state.value}",
                         f"  Duration: {_sec_to_human(curr.duration_sec)} (very brief)",
-                        f"  Cause: Frame-level noise or temporary occlusion causing",
-                        f"         a false state change that immediately reverts",
-                        f"  Impact: False bed exit/return if near bed transitions",
-                        f"  Mitigation: Minimum segment duration threshold (currently {3}s)",
+                        f"  Cause: Could be a real brief change or frame-level noise;",
+                        f"         ground-truth labels are needed to decide.",
+                        f"  Impact: May change activity-duration and bed-event counts.",
+                        f"  Mitigation: Compare against labeled frames; current temporal",
+                        f"              smoothing does not remove all short transitions.",
                         "",
                     ])
                     break
@@ -537,9 +526,17 @@ class ReportGenerator:
 
         if case_num < 3:
             lines.extend([
-                "Case (No major failures detected in this video.)",
-                "  The system performed reliably across all analyzed segments.",
+                "No additional data-dependent failure patterns were identified.",
                 "",
             ])
+
+        lines.extend([
+            "UNTESTED FAILURE SCENARIOS (not observed or measured in this video)",
+            "-" * 60,
+            "  1. Caregiver enters while the resident is occluded: identity may switch.",
+            "  2. Poor lighting or blanket occlusion: posture may be misclassified.",
+            "  3. Resident leaves camera view: absence may be confused with bed exit.",
+            "",
+        ])
 
         return lines

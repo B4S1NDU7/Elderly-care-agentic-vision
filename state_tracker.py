@@ -92,11 +92,6 @@ MIN_STABLE_FRAMES: Dict[ActivityState, int] = {
 # Minimum duration (seconds) before a segment is committed
 MIN_SEGMENT_DURATION_SEC = 3.0
 
-# Thresholds for bed event detection
-BED_EXIT_TRANSITION_WINDOW_SEC = 30.0   # look back this far to confirm exit
-BED_RETURN_TRANSITION_WINDOW_SEC = 30.0
-
-
 class TemporalStateTracker:
     """
     Manages state history and produces a smooth, transition-aware timeline.
@@ -134,11 +129,13 @@ class TemporalStateTracker:
 
         # Bed event tracking
         self._bed_events: List[BedEvent] = []
-        self._last_in_bed_state: Optional[ActivityState] = None
-        self._last_in_bed_time: float = 0.0
         self._consecutive_out_of_bed_start: Optional[float] = None
+        self._exit_candidate_start: Optional[float] = None
+        self._exit_candidate_state: Optional[ActivityState] = None
+        self._longest_out_of_bed_period_sec: float = 0.0
         self._sitting_on_edge_start: Optional[float] = None
         self._sitting_on_edge_duration: float = 0.0
+        self._finalized = False
 
     # ------------------------------------------------------------------
     # Public API
@@ -157,15 +154,31 @@ class TemporalStateTracker:
         Called after all frames are processed.
         Closes the last open segment and fills any gaps.
         """
+        if self._finalized:
+            raise RuntimeError("Tracker has already been finalized.")
+
         if self._current_state is not None:
             # Close the last segment
             self._close_segment(video_duration_sec)
+
+        if self._sitting_on_edge_start is not None:
+            self._sitting_on_edge_duration += max(
+                0.0, video_duration_sec - self._sitting_on_edge_start
+            )
+            self._sitting_on_edge_start = None
+
+        if self._consecutive_out_of_bed_start is not None:
+            self._longest_out_of_bed_period_sec = max(
+                self._longest_out_of_bed_period_sec,
+                video_duration_sec - self._consecutive_out_of_bed_start,
+            )
 
         # Fill any uncovered time with UNKNOWN
         self._fill_gaps(video_duration_sec)
 
         # Recompute durations from finalized segments
         self._recompute_durations()
+        self._finalized = True
 
         logger.info(
             f"Finalized: {len(self._segments)} segments, "
@@ -312,7 +325,7 @@ class TemporalStateTracker:
         self._segments.sort(key=lambda s: s.start_sec)
 
         # Fill gap at beginning
-        if self._segments[0].start_sec > 1.0:
+        if self._segments[0].start_sec > 0.01:
             self._segments.insert(0, StateSegment(
                 state=ActivityState.UNKNOWN,
                 start_sec=0.0,
@@ -325,7 +338,7 @@ class TemporalStateTracker:
         for seg in self._segments[1:]:
             prev = filled[-1]
             gap = seg.start_sec - prev.end_sec
-            if gap > 1.0:
+            if gap > 0.01:
                 filled.append(StateSegment(
                     state=ActivityState.UNKNOWN,
                     start_sec=prev.end_sec,
@@ -336,7 +349,7 @@ class TemporalStateTracker:
 
         # Fill gap at end
         last = filled[-1]
-        if last.end_sec < video_duration_sec - 1.0:
+        if last.end_sec < video_duration_sec - 0.01:
             filled.append(StateSegment(
                 state=ActivityState.UNKNOWN,
                 start_sec=last.end_sec,
@@ -371,11 +384,6 @@ class TemporalStateTracker:
         """Update bed event tracking on each state transition."""
         old_state = self._current_state
 
-        # Track in-bed history
-        if new_state in self.IN_BED_STATES:
-            self._last_in_bed_state = new_state
-            self._last_in_bed_time = timestamp
-
         # Sitting on bed edge tracking (MONITOR trigger)
         if new_state == ActivityState.SITTING_ON_BED:
             if self._sitting_on_edge_start is None:
@@ -385,41 +393,41 @@ class TemporalStateTracker:
                 self._sitting_on_edge_duration += timestamp - self._sitting_on_edge_start
                 self._sitting_on_edge_start = None
 
-        # Bed EXIT detection
-        # Trigger: was in bed → now out of bed (via STANDING or WALKING)
-        if (
-            old_state in self.IN_BED_STATES
-            and new_state in {ActivityState.STANDING, ActivityState.WALKING}
-        ):
-            self._check_and_emit_bed_exit(old_state, new_state, timestamp)
-
-        # Direct exit (e.g., SITTING_ON_BED → OUT_OF_BED in one jump)
+        if old_state in self.IN_BED_STATES and new_state == ActivityState.STANDING:
+            # Standing alone can be a brief adjustment; wait for evidence of
+            # movement away from the bed before confirming the exit.
+            self._exit_candidate_start = timestamp
+            self._exit_candidate_state = old_state
         elif (
             old_state in self.IN_BED_STATES
-            and new_state in {ActivityState.OUT_OF_BED, ActivityState.SITTING_OUTSIDE_BED}
+            and new_state in {
+                ActivityState.WALKING,
+                ActivityState.OUT_OF_BED,
+                ActivityState.SITTING_OUTSIDE_BED,
+            }
         ):
-            self._check_and_emit_bed_exit(old_state, new_state, timestamp)
-
-        # Also emit when transition completes (STANDING → WALKING → OUT_OF_BED)
+            # Classifiers may skip the standing observation; these states
+            # already provide evidence that the person moved away from bed.
+            self._exit_candidate_start = timestamp
+            self._exit_candidate_state = old_state
+            self._confirm_bed_exit(new_state, timestamp)
         elif (
-            old_state == ActivityState.STANDING
-            and new_state in {ActivityState.WALKING, ActivityState.OUT_OF_BED}
-            and self._consecutive_out_of_bed_start is None
+            self._exit_candidate_start is not None
+            and new_state in {
+                ActivityState.WALKING,
+                ActivityState.OUT_OF_BED,
+                ActivityState.SITTING_OUTSIDE_BED,
+            }
         ):
-            # Look back to see if this follows a bed-related state
-            recent_in_bed = self._was_recently_in_bed(timestamp, window_sec=60)
-            if recent_in_bed:
-                self._emit_bed_exit(
-                    start_time=self._last_in_bed_time,
-                    confirmed_time=timestamp,
-                    prev_state=self._last_in_bed_state or old_state,
-                    current_state=new_state,
-                )
+            self._confirm_bed_exit(new_state, timestamp)
+        elif new_state in self.IN_BED_STATES:
+            # Returning to bed before moving away cancels the candidate.
+            self._exit_candidate_start = None
+            self._exit_candidate_state = None
 
-        # Bed RETURN detection
-        # Trigger: was out of bed → now sitting/lying in bed
+        # Bed RETURN detection only follows a previously confirmed exit.
         if (
-            old_state in self.OUT_STATES
+            (old_state in self.OUT_STATES or old_state == ActivityState.UNKNOWN)
             and new_state in self.IN_BED_STATES
             and self._consecutive_out_of_bed_start is not None
         ):
@@ -430,32 +438,34 @@ class TemporalStateTracker:
                 current_state=new_state,
             )
 
-        # Track continuous out-of-bed periods
-        if new_state in self.OUT_STATES:
-            if self._consecutive_out_of_bed_start is None:
-                self._consecutive_out_of_bed_start = timestamp
-        elif new_state in self.IN_BED_STATES:
+        if (
+            new_state in self.IN_BED_STATES
+            and self._consecutive_out_of_bed_start is not None
+        ):
             self._consecutive_out_of_bed_start = None
 
-    def _check_and_emit_bed_exit(
-        self,
-        prev_state: ActivityState,
-        current_state: ActivityState,
-        timestamp: float,
-    ):
-        """Emit a bed exit event (with confidence check)."""
-        # Do not emit if this is just a brief position adjustment
-        # Heuristic: the person must have been in bed for > 30 seconds
-        time_in_bed = timestamp - self._last_in_bed_time
-        if time_in_bed < 5:  # ignore if in bed for less than 5 seconds
+        # Track the longest confirmed continuous absence.
+        if new_state in self.OUT_STATES:
+            if self._consecutive_out_of_bed_start is not None:
+                self._longest_out_of_bed_period_sec = max(
+                    self._longest_out_of_bed_period_sec,
+                    timestamp - self._consecutive_out_of_bed_start,
+                )
+
+    def _confirm_bed_exit(self, current_state: ActivityState, timestamp: float):
+        """Emit a bed exit after movement away from a standing candidate."""
+        if self._exit_candidate_start is None or self._exit_candidate_state is None:
             return
 
+        self._consecutive_out_of_bed_start = self._exit_candidate_start
         self._emit_bed_exit(
-            start_time=self._last_in_bed_time,
+            start_time=self._exit_candidate_start,
             confirmed_time=timestamp,
-            prev_state=prev_state,
+            prev_state=self._exit_candidate_state,
             current_state=current_state,
         )
+        self._exit_candidate_start = None
+        self._exit_candidate_state = None
 
     def _emit_bed_exit(
         self,
@@ -465,10 +475,6 @@ class TemporalStateTracker:
         current_state: ActivityState,
     ):
         """Create and record a BED_EXIT event."""
-        # Set consecutive out-of-bed start
-        if self._consecutive_out_of_bed_start is None:
-            self._consecutive_out_of_bed_start = confirmed_time
-
         # Confidence based on how clear the transition is
         confidence = 0.85
         if current_state == ActivityState.WALKING:
@@ -527,16 +533,13 @@ class TemporalStateTracker:
             ),
         )
         self._bed_events.append(event)
+        self._longest_out_of_bed_period_sec = max(
+            self._longest_out_of_bed_period_sec, out_duration
+        )
         logger.info(
             f"BED_RETURN detected @ {confirmed_time:.1f}s "
             f"(was out for {out_duration:.0f}s)"
         )
-
-    def _was_recently_in_bed(self, timestamp: float, window_sec: float) -> bool:
-        """Check if the person was in bed within the last window_sec seconds."""
-        if self._last_in_bed_time is None:
-            return False
-        return (timestamp - self._last_in_bed_time) <= window_sec
 
     def get_summary_stats(self) -> Dict:
         """Return summary statistics for reporting."""
@@ -558,4 +561,6 @@ class TemporalStateTracker:
                 1 for e in self._bed_events if e.event_type == BedEventType.BED_RETURN
             ),
             "sitting_on_edge_duration_sec": self._sitting_on_edge_duration,
+            "longest_out_of_bed_period_sec": self._longest_out_of_bed_period_sec,
+            "continuous_out_of_bed_sec": self._longest_out_of_bed_period_sec,
         }
