@@ -1,0 +1,17 @@
+ACTIVITY TIMELINE
+============================================================
+Video: demo_video.mp4
+Duration: 1m 00s
+
+00:00 – 00:15    LYING_IN_BED              (15s) 🛏
+00:15 – 00:20    SITTING_ON_BED            (5s) 🛏
+00:20 – 00:22    STANDING                  (2s)
+00:22 – 00:30    WALKING                   (8s) 🚶
+00:30 – 00:40    SITTING_OUTSIDE_BED       (10s)
+00:40 – 00:45    WALKING                   (5s) 🚶
+00:45 – 00:48    SITTING_ON_BED            (3s) 🛏
+00:48 – 01:00    LYING_IN_BED              (12s) 🛏
+
+Final State: LYING_IN_BED
+Alert Level: NORMAL
+Alert Reason: Temporal state rule assessment: out_of_bed=25s, sitting_edge=8s.

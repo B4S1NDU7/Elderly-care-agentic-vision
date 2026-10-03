@@ -1,0 +1,22 @@
+ACTIVITY DURATION SUMMARY
+============================================================
+Total Observation Time: 1m 00s
+
+Activity Breakdown:
+----------------------------------------
+  lying_in_bed                     27s  ( 45.0%)  █████████
+  sitting_on_bed                    8s  ( 13.3%)  ██
+  sitting_outside_bed              10s  ( 16.7%)  ███
+  standing                          2s  (  3.3%)  
+  walking                          13s  ( 21.7%)  ████
+
+Bed Summary:
+----------------------------------------
+  Time in bed:           35s
+  Time out of bed:       25s
+  Bed exit count:        1
+  Bed return count:      1
+  Longest out of bed:    25s
+
+Final State:  LYING_IN_BED
+Alert Level:  NORMAL

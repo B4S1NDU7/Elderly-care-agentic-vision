@@ -1,0 +1,8 @@
+AGENTIC REASONING LOG
+==================================================
+
+[1] Trigger: Potential bed exit detected
+Action: Analyzed surrounding temporal context with VLM
+Finding: Context sequence includes movement away from bed.
+Conclusion: Bed exit CONFIRMED: BED_EXIT confirmed by subsequent movement away from bed. (conf=0.90)
+----------------------------------------
