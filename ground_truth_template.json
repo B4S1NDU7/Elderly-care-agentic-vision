@@ -1,0 +1,31 @@
+{
+  "_comment": "Ground truth annotation template. Fill this in for evaluation against known data.",
+  "video_name": "your_video.mp4",
+  "observation_duration_sec": 1200,
+  "activity_duration_sec": {
+    "lying_in_bed": 702,
+    "sitting_on_bed": 128,
+    "sitting_outside_bed": 95,
+    "standing": 63,
+    "walking": 167,
+    "out_of_bed": 0,
+    "unknown": 45
+  },
+  "bed_exit_count": 2,
+  "bed_return_count": 2,
+  "bed_exit_times_sec": [308, 780],
+  "bed_return_times_sec": [550, 1050],
+  "timeline": [
+    {"start_sec": 0,   "end_sec": 272, "state": "lying_in_bed"},
+    {"start_sec": 272, "end_sec": 308, "state": "sitting_on_bed"},
+    {"start_sec": 308, "end_sec": 320, "state": "standing"},
+    {"start_sec": 320, "end_sec": 461, "state": "walking"},
+    {"start_sec": 461, "end_sec": 555, "state": "sitting_outside_bed"},
+    {"start_sec": 555, "end_sec": 582, "state": "walking"},
+    {"start_sec": 582, "end_sec": 601, "state": "sitting_on_bed"},
+    {"start_sec": 601, "end_sec": 900, "state": "lying_in_bed"},
+    {"start_sec": 900, "end_sec": 960, "state": "walking"},
+    {"start_sec": 960, "end_sec": 1155, "state": "out_of_bed"},
+    {"start_sec": 1155,"end_sec": 1200,"state": "lying_in_bed"}
+  ]
+}
