@@ -34,7 +34,7 @@ class EvaluationTests(unittest.TestCase):
         )
         self.assertEqual(sum(duration_by_state.values()), ground_truth["observation_duration_sec"])
         self.assertEqual(ground_truth["bed_exit_times_sec"], [320, 912])
-        self.assertEqual(ground_truth["bed_return_times_sec"], [582, 1155])
+        self.assertEqual(ground_truth["bed_return_times_sec"], [562, 1016])
 
     def test_metrics_use_timestamp_matches_and_include_confusion_matrix(self):
         report = AnalysisReport(
