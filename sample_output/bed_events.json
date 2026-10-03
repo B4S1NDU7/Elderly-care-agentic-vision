@@ -1,0 +1,26 @@
+{
+  "bed_exit_count": 1,
+  "bed_return_count": 1,
+  "events": [
+    {
+      "event": "bed_exit",
+      "start_time": "00:00:20",
+      "confirmed_time": "00:00:22",
+      "previous_state": "sitting_on_bed",
+      "current_state": "walking",
+      "confidence": 0.92,
+      "decision": "MONITOR",
+      "context_reasoning": "Person transitioned from sitting_on_bed \u2192 walking at 22s. This confirms a bed exit."
+    },
+    {
+      "event": "bed_return",
+      "start_time": "00:00:20",
+      "confirmed_time": "00:00:45",
+      "previous_state": "walking",
+      "current_state": "sitting_on_bed",
+      "confidence": 0.88,
+      "decision": "NORMAL",
+      "context_reasoning": "Person returned to bed after 25s out of bed. Transition: walking \u2192 sitting_on_bed."
+    }
+  ]
+}
