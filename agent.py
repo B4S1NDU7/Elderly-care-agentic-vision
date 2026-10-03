@@ -184,29 +184,34 @@ class AgenticEngine:
         confidence = float(result.get("confidence", 0.7))
         reasoning = result.get("reasoning", "")
 
-        # Parse conclusion
-        text_lower = (conclusion + " " + reasoning).lower()
-        negative_evidence = (
-            "not genuine",
-            "not a genuine",
-            "not confirmed",
-            "not an exit",
-            "not a bed exit",
-            "no bed exit",
-            "no genuine exit",
-            "did not leave",
-            "did not exit",
-            "remains in bed",
-            "position adjustment",
-            "adjusting position",
-            "remained on the bed",
-            "returned to bed",
-        )
-        positive_evidence = ("genuine", "confirmed", "bed exit")
-        is_exit = (
-            any(phrase in text_lower for phrase in positive_evidence)
-            and not any(phrase in text_lower for phrase in negative_evidence)
-        )
+        explicit_decision = result.get("is_bed_exit")
+        if isinstance(explicit_decision, bool):
+            is_exit: Optional[bool] = explicit_decision
+        else:
+            text_lower = (conclusion + " " + reasoning).lower()
+            negative_evidence = (
+                "not genuine",
+                "not a genuine",
+                "not confirmed",
+                "not an exit",
+                "not a bed exit",
+                "no bed exit",
+                "no genuine exit",
+                "did not leave",
+                "did not exit",
+                "remains in bed",
+                "position adjustment",
+                "adjusting position",
+                "remained on the bed",
+                "returned to bed",
+            )
+            positive_evidence = ("genuine", "confirmed", "bed exit")
+            if any(phrase in text_lower for phrase in negative_evidence):
+                is_exit = False
+            elif any(phrase in text_lower for phrase in positive_evidence):
+                is_exit = True
+            else:
+                is_exit = None
 
         decision = AgentDecision(
             trigger="Potential bed exit detected",
