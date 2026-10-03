@@ -344,26 +344,25 @@ class ElderlyCarePipeline:
             # Check for bed exit scenarios
             if (
                 prev.state in tracker.IN_BED_STATES
-                and curr.state in {ActivityState.STANDING, ActivityState.WALKING}
+                and curr.state in (
+                    tracker.OUT_STATES | {ActivityState.UNKNOWN}
+                )
                 and curr.confidence > 0.6
             ):
                 is_exit, conf, reasoning = agent.evaluate_bed_exit(
-                    curr, all_analyses[:i]
+                    curr, all_analyses
                 )
                 if is_exit is False:
-                    # Revert the exit classification
                     logger.info(
-                        f"Agentic: Rejected potential bed exit @ {curr.timestamp_sec:.1f}s"
+                        "Agentic: No bed exit confirmed near %.1fs: %s",
+                        curr.timestamp_sec,
+                        reasoning,
                     )
-                    all_analyses[i].state = ActivityState.SITTING_ON_BED
-                    all_analyses[i].confidence = conf
-                    all_analyses[i].reasoning = f"[Agentic rejected exit] {reasoning}"
                 elif is_exit is None:
-                    all_analyses[i].state = ActivityState.UNKNOWN
-                    all_analyses[i].confidence = 0.0
-                    all_analyses[i].reasoning = (
-                        f"[Agentic unresolved exit] {reasoning}"
-                    )
+                    if curr.confidence < 0.75:
+                        all_analyses[i].state = ActivityState.UNKNOWN
+                        all_analyses[i].confidence = 0.0
+                    all_analyses[i].reasoning = f"[Agentic unresolved exit] {reasoning}"
 
             # Check horizontal body (floor vs bed)
             if (
