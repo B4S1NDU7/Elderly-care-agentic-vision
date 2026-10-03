@@ -37,7 +37,7 @@ An end-to-end **Agentic AI + Vision** system that continuously monitors an elder
        ▼
 ┌──────────────────────┐
 │   Frame Extractor    │  Uniform sampling (every N seconds)
-│  video_extractor.py  │  + scene-change detection for key transitions
+│  video_extractor.py  │  Uniform temporal sampling
 └──────┬───────────────┘
        │
        ├──────────────────────────────┐
@@ -88,7 +88,7 @@ An end-to-end **Agentic AI + Vision** system that continuously monitors an elder
                            └─────────────────────────────┘
 ```
 
-See `architecture.png` for the full visual diagram (generate with `python generate_diagram.py`).
+See [architecture.png](./architecture.png) for the architecture diagram.
 
 ---
 
@@ -97,17 +97,16 @@ See `architecture.png` for the full visual diagram (generate with `python genera
 | File | Purpose |
 |------|---------|
 | `models.py` | Data models: ActivityState, FrameAnalysis, BedEvent, AnalysisReport |
-| `video_extractor.py` | Frame extraction with uniform sampling + scene-change detection |
+| `video_extractor.py` | Frame extraction at a configurable uniform interval |
 | `pose_detector.py` | YOLOv8 person detection + MediaPipe Pose landmark extraction |
 | `vlm_analyzer.py` | GPT-4o Vision integration for state classification |
 | `state_tracker.py` | Temporal smoothing, valid transitions, bed event detection |
 | `agent.py` | Agentic reasoning engine for ambiguity resolution |
 | `report_generator.py` | Output generation: timeline, summary, events, evaluation |
 | `pipeline.py` | Main orchestrator coordinating all components |
-| `evaluation.py` | Metrics: duration MAE, bed event P/R/F1, accuracy |
+| `evaluation.py` | Ground-truth duration, event, and timeline metrics |
 | `main.py` | CLI entry point |
 | `demo.py` | Demo with synthetic video generation |
-| `generate_diagram.py` | Architecture diagram generator |
 
 ---
 
@@ -148,26 +147,27 @@ to override the transition validator.
 ```
 LYING_IN_BED or SITTING_ON_BED
         ↓
-    STANDING (confirmed ≥ 3 frames)
+    STANDING (candidate only; does not by itself confirm exit)
         ↓
-    WALKING or OUT_OF_BED
+    WALKING, SITTING_OUTSIDE_BED, or OUT_OF_BED
         ↓
     BED_EXIT event emitted
 ```
 
 **False positive prevention:**
 - Sitting up briefly does NOT count as a bed exit
-- The person must transition through STANDING → WALKING
-- Agentic engine verifies by analyzing ±15s of context frames
-- Position adjustments (turning, repositioning blankets) are filtered out
+- Standing briefly and returning to bed cancels the candidate
+- A move-away state must follow the standing candidate
+- Direct transitions to a move-away state are accepted when a sampled
+  intermediate standing state is unavailable
+- Agentic context review can revise frame labels; the temporal tracker is
+  rebuilt from the revised labels before events and durations are reported
 
 ### Bed Return Detection
 ```
-OUT_OF_BED or WALKING (near bed)
+Confirmed out-of-bed state
         ↓
-    SITTING_ON_BED
-        ↓
-    LYING_IN_BED
+SITTING_ON_BED or LYING_IN_BED
         ↓
     BED_RETURN event emitted
 ```
@@ -185,18 +185,20 @@ The system produces one of three alert levels based on rules + VLM reasoning:
 
 ### MONITOR
 Triggered when:
-- Person sits on bed edge for **> 10 minutes** (fall risk)
-- UNKNOWN state persists for > 30 seconds
-- Out of bed for > 20 minutes continuously
+- Person is classified as `SITTING_ON_BED` for **> 10 minutes**. This is a
+  conservative proxy; the current detector cannot distinguish edge from
+  middle-of-bed sitting.
+- `UNKNOWN` activity accumulates for more than 30 seconds
+- The longest confirmed out-of-bed period exceeds 20 minutes
 
 ### ALERT
 Triggered when:
 - Person is continuously **out of bed > 45 minutes**
-- Person detected lying horizontally **outside** the bed (fall suspected)
-- No movement detected for > 3 hours
+- Agentic analysis detects a person lying on the floor (potential fall)
 
 **Rule-based pre-screening** runs instantly (no API call) for fast alerting.
-The VLM then provides nuanced reasoning for edge cases.
+When the VLM responds, it may raise the severity but cannot downgrade a
+rule-triggered `MONITOR` or `ALERT`.
 
 ---
 
@@ -255,20 +257,13 @@ python main.py \
 ```bash
 python main.py \
   --video input/room.mp4 \
-  --gt ground_truth_template.json \
-  --evaluate
+  --gt ground_truth_template.json
 ```
 
 ### Demo (Synthetic Video)
 
 ```bash
 python demo.py --api-key sk-your-key --duration 120
-```
-
-### Generate Architecture Diagram
-
-```bash
-python generate_diagram.py
 ```
 
 ### CLI Options
@@ -381,27 +376,38 @@ AGENTIC REASONING LOG
 python main.py --video video.mp4 --gt ground_truth_template.json
 ```
 
-### Metrics Computed
+With ground truth, the report calculates per-state duration error, activity
+timeline accuracy, per-state accuracy, a confusion matrix, and tolerance-based
+precision/recall/F1 for bed exits and returns. Event time annotations are matched
+within 30 seconds. Results are video-specific; this repository does not claim
+benchmark accuracy.
 
-**1. Duration Estimation MAE**
+`ground_truth_template.json` is a consistent illustrative annotation for
+validating metric wiring. Replace it with manually annotated labels and event
+times for the exact video being evaluated before treating metrics as evidence.
 
-| State | Ground Truth | Predicted | Error |
-|-------|-------------|-----------|-------|
-| lying_in_bed | 11:50 | 11:42 | 8s |
-| sitting_on_bed | 2:00 | 2:08 | 8s |
-| walking | 2:52 | 2:47 | 5s |
+### Regression tests
 
-**2. Bed Event Metrics**
+```bash
+python -m unittest discover -s tests -v
+```
 
-| Metric | Value |
-|--------|-------|
-| Bed Exit Precision | 0.90 |
-| Bed Exit Recall | 0.90 |
-| Bed Exit F1 | 0.90 |
+`sample_output/` contains reports from an offline synthetic smoke test. They
+verify the report formats and pipeline wiring only; they are not model
+accuracy results. Its `synthetic_ground_truth.json` annotates the deterministic
+59-second video generated by `demo.py --duration 60`; the current mock run
+achieves 52.5% state accuracy, illustrating that a successful run is not a
+claim of robust classification.
 
-**3. Activity Recognition Accuracy**
+To reproduce the annotated mock evaluation, generate the synthetic video and
+run:
 
-Second-by-second timeline overlap against ground truth labels.
+```bash
+python demo.py --duration 60 --mock --interval 2
+python main.py --video demo_video.mp4 --mock --no-pose --no-agent \
+  --interval 2 --gt sample_output/synthetic_ground_truth.json \
+  --output demo_output
+```
 
 ---
 
@@ -409,20 +415,22 @@ Second-by-second timeline overlap against ground truth labels.
 
 The system is designed to handle these difficult scenarios:
 
-### Handled ✅
-- **Turning in bed** → classified as LYING_IN_BED (horizontal body + on-bed check)
-- **Sitting up without leaving** → SITTING_ON_BED, agentic engine rejects false bed exit
-- **Brief standing before sitting back down** → not counted as bed exit (< 3 frames threshold)
-- **Temporary occlusion** → UNKNOWN state with temporal interpolation from neighbors
-- **Person partially hidden by blankets** → VLM + pose estimate work together
+These are failure-case scenarios to test, not claims that the supplied demo
+contains or successfully handles them:
 
-### Known Limitations ⚠️
-- **Caregiver entering scene** → Can confuse primary person tracking (YOLOv8 picks highest conf)
-- **Very poor lighting** → Higher UNKNOWN rate; VLM degrades with dark/noisy frames
-- **Camera angle** → System tuned for overhead/side angles; extreme perspectives may fail
-- **Fast movement blur** → Motion blur reduces VLM classification accuracy
+1. **Brief standing then sitting back on the bed**: a bed-exit false positive
+   is possible if the VLM changes the state directly to a move-away label.
+2. **Caregiver enters while the resident is occluded**: the system may follow
+   the wrong person because persistent resident identity/re-identification is
+   not implemented.
+3. **Poor lighting or blanket occlusion**: posture and bed occupancy may be
+   unclear; `UNKNOWN` should be preferred, but model errors remain possible.
+4. **Temporary disappearance from camera view**: may be interpreted as
+   `OUT_OF_BED`; a camera-view/identity model is not implemented.
 
-See `evaluation_report.txt` for detailed failure case analysis of your specific video.
+Use difficult, labeled videos to determine whether each case is actually
+handled. `evaluation_report.txt` reports observed labels and metrics when
+ground truth is supplied; it cannot establish performance for untested cases.
 
 ---
 
@@ -433,28 +441,28 @@ GPT-4o provides superior scene understanding, especially for edge cases like:
 distinguishing bed vs. floor, recognizing partial occlusion, handling unusual camera angles.
 Unlike specialized models, it requires no training data and generalizes well.
 
-### Why YOLOv8 + MediaPipe?
-Running locally (no additional API cost), these models provide structured pose features
-that dramatically improve VLM accuracy. The pose context tells GPT-4o *exactly* how the
-body is oriented, reducing ambiguity by ~40%.
+### Why YOLOv8 Pose?
+The pose detector supplies local person and body-landmark features to complement
+the VLM. No accuracy improvement is claimed without a labeled benchmark.
 
 ### Why Temporal Smoothing?
-Single-frame VLM predictions have ~15-20% noise rate due to motion blur,
-occlusion, and visual ambiguity. A 3-frame smoothing window eliminates most
-false transitions while adding only a 4-6 second latency.
+The tracker votes over a configurable frame window to reduce brief
+classification fluctuations. The effect on accuracy and latency requires
+measurement on labeled videos.
 
 ### Why an Agentic Engine?
 Some transitions genuinely require temporal context — the same frame showing a person
 standing next to a bed could be a bed exit OR the person just adjusting their position.
-The agentic engine detects these cases and provides the VLM with before/after context,
-improving bed exit precision by an estimated 20-25%.
+The agentic engine can ask the VLM to review contextual frames; its impact on
+precision must be measured rather than assumed.
 
 ### Alert Thresholds
-- **10 min sitting on edge**: Research shows >10 min unsupported edge sitting
-  significantly elevates fall risk in elderly patients.
+- **10 min classified sitting on bed**: Used as a conservative alerting proxy;
+  edge-specific detection is not available in the current pose/state features.
 - **45 min out of bed**: Prolonged absence suggests the person may need assistance
   but hasn't returned (possible fall, bathroom difficulty, etc.)
-- These thresholds are configurable via the `PipelineConfig` class.
+- These thresholds are implemented in the VLM analyzer's rule-based alert
+function and should be tuned against the care setting before deployment.
 
 ---
 
@@ -473,10 +481,12 @@ Elderly-care-agentic-vision/
 ├── agent.py                   # Agentic reasoning engine
 ├── report_generator.py        # Output generation
 ├── evaluation.py              # Metrics computation
-├── generate_diagram.py        # Architecture diagram
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # API key template
 ├── ground_truth_template.json # GT annotation format
+├── architecture.png           # Architecture diagram
+├── sample_output/              # Offline synthetic smoke-test reports
+│   └── synthetic_ground_truth.json
 └── output/                    # Generated reports (created at runtime)
     ├── activity_timeline.txt
     ├── activity_summary.txt
