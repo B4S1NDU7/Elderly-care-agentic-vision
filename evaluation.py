@@ -81,7 +81,7 @@ class EvaluationMetrics:
                     "predicted_sec": round(pred_val, 1),
                     "predicted_human": _sec_to_human(pred_val),
                     "abs_error_sec": round(abs_error, 1),
-                    "abs_error_human": _sec_to_human(abs_error),
+                    "abs_error_human": f"{abs_error:.1f}s",
                     "relative_error_pct": round(rel_error, 1),
                 }
                 total_abs_error += abs_error
@@ -91,7 +91,7 @@ class EvaluationMetrics:
         return {
             "per_state": results,
             "mean_absolute_error_sec": round(mean_abs_error, 1),
-            "mean_absolute_error_human": _sec_to_human(mean_abs_error),
+            "mean_absolute_error_human": f"{mean_abs_error:.1f}s",
         }
 
     def _bed_event_metrics(self) -> Dict:
@@ -102,7 +102,7 @@ class EvaluationMetrics:
         pred_exits = self.report.bed_exit_count
         pred_returns = self.report.bed_return_count
 
-        # Tolerance-based matching: event is correct if within ±30s
+        # Match event timestamps within the declared tolerance (10s by default).
         gt_exit_times = self.gt.get("bed_exit_times_sec", [])
         gt_return_times = self.gt.get("bed_return_times_sec", [])
         pred_exit_times = [
@@ -115,10 +115,12 @@ class EvaluationMetrics:
         ]
 
         exit_metrics = self._event_metrics(
-            gt_exit_times, pred_exit_times, gt_exits, pred_exits
+            gt_exit_times, pred_exit_times, gt_exits, pred_exits,
+            tolerance_sec=float(self.gt.get("event_tolerance_sec", 10.0)),
         )
         return_metrics = self._event_metrics(
-            gt_return_times, pred_return_times, gt_returns, pred_returns
+            gt_return_times, pred_return_times, gt_returns, pred_returns,
+            tolerance_sec=float(self.gt.get("event_tolerance_sec", 10.0)),
         )
 
         return {
@@ -140,7 +142,7 @@ class EvaluationMetrics:
         pred_times: List[float],
         gt_count: int,
         pred_count: int,
-        tolerance_sec: float = 30.0,
+        tolerance_sec: float = 10.0,
     ) -> Dict:
         """Compute precision/recall/F1 with temporal tolerance."""
         if not gt_times:
@@ -268,7 +270,8 @@ class EvaluationMetrics:
 
         lines.extend([
             "",
-            "2. BED EVENT METRICS",
+            f"2. BED EVENT METRICS (timestamp tolerance: "
+            f"{self.gt.get('event_tolerance_sec', 10.0):g}s)",
             "-" * 40,
         ])
         bem = metrics.get("bed_event_metrics", {})

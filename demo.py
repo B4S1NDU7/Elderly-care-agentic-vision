@@ -29,6 +29,12 @@ def create_synthetic_video(output_path: str, duration_sec: int = 120, fps: int =
     width, height = 640, 480
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    if not out.isOpened():
+        raise ValueError(f"Cannot create synthetic video: {output_path}")
+
+    if duration_sec <= 0 or fps <= 0:
+        out.release()
+        raise ValueError("duration_sec and fps must be positive.")
 
     total_frames = duration_sec * fps
 
@@ -61,9 +67,19 @@ def create_synthetic_video(output_path: str, duration_sec: int = 120, fps: int =
     # Proportional scaling so all states and bed events occur regardless of duration
     base_total = sum(d for _, d in scenario)
     scale = duration_sec / max(base_total, 1)
-    scaled_scenario = [(s, max(2, int(round(d * scale)))) for s, d in scenario]
+    boundaries = [0]
+    elapsed = 0
+    for _, state_duration in scenario[:-1]:
+        elapsed += state_duration
+        boundaries.append(round(elapsed * scale))
+    boundaries.append(duration_sec)
+    scaled_scenario = [
+        (state, boundaries[index + 1] - boundaries[index])
+        for index, (state, _) in enumerate(scenario)
+    ]
 
     frame_idx = 0
+    rng = np.random.default_rng(seed=0)
 
     for state, dur in scaled_scenario:
         bg_color = state_colors.get(state, (80, 80, 80))
@@ -74,7 +90,7 @@ def create_synthetic_video(output_path: str, duration_sec: int = 120, fps: int =
                 break
 
             # Add noise for realism
-            noise = np.random.randint(-8, 8, (height, width, 3), dtype=np.int16)
+            noise = rng.integers(-8, 8, (height, width, 3), dtype=np.int16)
             bg = np.clip(
                 np.full((height, width, 3), bg_color, dtype=np.int16) + noise,
                 0, 255
