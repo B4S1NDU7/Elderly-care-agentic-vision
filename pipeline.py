@@ -144,7 +144,8 @@ class ElderlyCarePipeline:
         logger.info("[2/5] Detecting bed region...")
         bed_region = self._detect_bed_region(frames)
 
-        # Step 3: Initialize tracker and agent
+        # The tracker is used for state definitions while the agent reviews
+        # observations, then rebuilt from the agent-corrected analyses below.
         tracker = TemporalStateTracker(
             smoothing_window=self.config.smoothing_window,
             min_segment_sec=self.config.min_segment_sec,
@@ -152,7 +153,7 @@ class ElderlyCarePipeline:
 
         # Step 4: Analyze each frame
         logger.info(f"[3/5] Analyzing {len(frames)} frames with VLM...")
-        all_analyses = self._analyze_frames(frames, video_info, bed_region, tracker)
+        all_analyses = self._analyze_frames(frames, video_info, bed_region)
 
         # Step 5: Agentic resolution of ambiguous cases
         if self.config.enable_agentic_resolution:
@@ -166,6 +167,13 @@ class ElderlyCarePipeline:
         else:
             agent = None
 
+        tracker = TemporalStateTracker(
+            smoothing_window=self.config.smoothing_window,
+            min_segment_sec=self.config.min_segment_sec,
+        )
+        for analysis in all_analyses:
+            tracker.add_frame(analysis)
+
         # Finalize tracker
         tracker.finalize(video_info.duration_sec)
 
@@ -174,24 +182,36 @@ class ElderlyCarePipeline:
         stats = tracker.get_summary_stats()
         final_state = tracker.current_state or ActivityState.UNKNOWN
 
-        if agent:
-            final_alert, alert_reason = agent.determine_final_alert(
-                final_state=final_state,
-                out_of_bed_sec=stats["total_out_of_bed_sec"],
-                bed_exit_count=stats["bed_exit_count"],
-                sitting_on_edge_sec=stats["sitting_on_edge_duration_sec"],
-                recent_timeline=[
-                    {
-                        "timestamp": seg.start_str,
-                        "state": seg.state.value,
-                        "confidence": seg.confidence,
-                    }
-                    for seg in tracker.segments[-10:]
-                ],
+        alert_result = self.vlm.determine_alert_level(
+            current_state=final_state,
+            out_of_bed_duration_sec=stats["longest_out_of_bed_period_sec"],
+            bed_exit_count=stats["bed_exit_count"],
+            sitting_on_edge_duration_sec=stats["sitting_on_edge_duration_sec"],
+            unknown_duration_sec=tracker.duration_map.get(
+                ActivityState.UNKNOWN.value, 0.0
+            ),
+            fall_suspected=any(
+                analysis.reasoning.startswith("[Agentic: floor risk]")
+                for analysis in all_analyses
+            ),
+            recent_timeline=[
+                {
+                    "timestamp": seg.start_str,
+                    "state": seg.state.value,
+                    "confidence": seg.confidence,
+                }
+                for seg in tracker.segments[-10:]
+            ],
+        )
+        try:
+            final_alert = AlertLevel(alert_result.get("alert_level", "NORMAL"))
+        except ValueError:
+            logger.warning(
+                "Ignoring invalid alert level returned by VLM: %r",
+                alert_result.get("alert_level"),
             )
-        else:
             final_alert = AlertLevel.NORMAL
-            alert_reason = "Agentic analysis disabled."
+        alert_reason = alert_result.get("reasoning", "No alert reasoning provided.")
 
         elapsed = time.time() - start_time
 
@@ -255,7 +275,6 @@ class ElderlyCarePipeline:
         frames: List[ExtractedFrame],
         video_info: VideoInfo,
         bed_region: Optional[BedRegion],
-        tracker: TemporalStateTracker,
     ) -> List[FrameAnalysis]:
         """Analyze all frames sequentially with pose + VLM."""
         all_analyses: List[FrameAnalysis] = []
@@ -297,7 +316,6 @@ class ElderlyCarePipeline:
                 )
 
             all_analyses.append(analysis)
-            tracker.add_frame(analysis)
             prev_state = analysis.state
 
             if self.config.verbose and i % 10 == 0:
@@ -332,7 +350,7 @@ class ElderlyCarePipeline:
                 is_exit, conf, reasoning = agent.evaluate_bed_exit(
                     curr, all_analyses[:i]
                 )
-                if not is_exit:
+                if is_exit is False:
                     # Revert the exit classification
                     logger.info(
                         f"Agentic: Rejected potential bed exit @ {curr.timestamp_sec:.1f}s"
@@ -340,6 +358,12 @@ class ElderlyCarePipeline:
                     all_analyses[i].state = ActivityState.SITTING_ON_BED
                     all_analyses[i].confidence = conf
                     all_analyses[i].reasoning = f"[Agentic rejected exit] {reasoning}"
+                elif is_exit is None:
+                    all_analyses[i].state = ActivityState.UNKNOWN
+                    all_analyses[i].confidence = 0.0
+                    all_analyses[i].reasoning = (
+                        f"[Agentic unresolved exit] {reasoning}"
+                    )
 
             # Check horizontal body (floor vs bed)
             if (

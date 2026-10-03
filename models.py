@@ -167,21 +167,28 @@ class AnalysisReport:
 
     @property
     def longest_out_of_bed_period_sec(self) -> float:
-        """Find the longest continuous out-of-bed period."""
-        out_states = {
-            ActivityState.SITTING_OUTSIDE_BED,
-            ActivityState.STANDING,
-            ActivityState.WALKING,
-            ActivityState.OUT_OF_BED,
-        }
+        """Find the longest confirmed absence, including brief unknown gaps."""
         max_period = 0.0
-        current = 0.0
-        for seg in self.timeline:
-            if seg.state in out_states:
-                current += seg.duration_sec
-                max_period = max(max_period, current)
-            else:
-                current = 0.0
+        active_exit_start = None
+        for event in sorted(self.bed_events, key=lambda item: item.confirmed_time_sec):
+            if event.event_type == BedEventType.BED_EXIT:
+                if active_exit_start is None:
+                    active_exit_start = event.start_time_sec
+            elif (
+                event.event_type == BedEventType.BED_RETURN
+                and active_exit_start is not None
+            ):
+                max_period = max(
+                    max_period,
+                    event.confirmed_time_sec - active_exit_start,
+                )
+                active_exit_start = None
+
+        if active_exit_start is not None:
+            max_period = max(
+                max_period,
+                self.observation_duration_sec - active_exit_start,
+            )
         return max_period
 
     def to_summary_dict(self) -> Dict:
