@@ -1,0 +1,22 @@
+{
+  "total_observation_time": "1m 00s",
+  "activity_summary": {
+    "lying_in_bed": "27s",
+    "sitting_on_bed": "8s",
+    "standing": "2s",
+    "walking": "13s",
+    "sitting_outside_bed": "10s",
+    "out_of_bed": "0s",
+    "unknown": "0s"
+  },
+  "bed_summary": {
+    "time_in_bed": "35s",
+    "time_out_of_bed": "25s",
+    "bed_exit_count": 1,
+    "bed_return_count": 1,
+    "longest_out_of_bed": "25s"
+  },
+  "final_state": "lying_in_bed",
+  "alert_level": "NORMAL",
+  "alert_reasoning": "Temporal state rule assessment: out_of_bed=25s, sitting_edge=8s."
+}
