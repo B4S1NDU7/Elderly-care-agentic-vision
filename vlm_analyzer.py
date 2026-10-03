@@ -80,6 +80,7 @@ Question: {question}
 
 Based on the temporal context, provide your analysis:
 {{
+  "is_bed_exit": <true|false|null>,
   "conclusion": "<your conclusion>",
   "state": "<final state determination>",
   "confidence": <float 0.0-1.0>,
@@ -226,7 +227,54 @@ class VLMAnalyzer:
         Provides temporal context to the VLM to help it make better decisions.
         """
         if self.mock_mode:
+            if "bed exit" in question.lower():
+                observed_states = []
+                for observation in observations:
+                    state_name = observation.split(" ", 1)[0].lower()
+                    try:
+                        observed_states.append(ActivityState(state_name))
+                    except ValueError:
+                        continue
+
+                first_in_bed = next(
+                    (
+                        index for index, state in enumerate(observed_states)
+                        if state in {
+                            ActivityState.LYING_IN_BED,
+                            ActivityState.SITTING_ON_BED,
+                        }
+                    ),
+                    None,
+                )
+                moved_away = first_in_bed is not None and any(
+                    state in {
+                        ActivityState.WALKING,
+                        ActivityState.OUT_OF_BED,
+                        ActivityState.SITTING_OUTSIDE_BED,
+                    }
+                    for state in observed_states[first_in_bed + 1:]
+                )
+                return {
+                    "is_bed_exit": moved_away,
+                    "conclusion": (
+                        "BED_EXIT confirmed by subsequent movement away from bed."
+                        if moved_away
+                        else "No bed exit; the person returned to or remained in bed."
+                    ),
+                    "state": (
+                        "OUT_OF_BED" if moved_away else "SITTING_ON_BED"
+                    ),
+                    "confidence": 0.9,
+                    "reasoning": (
+                        "Context sequence includes movement away from bed."
+                        if moved_away
+                        else "Context sequence shows no move-away state after the bed posture."
+                    ),
+                    "requires_alert": False,
+                    "alert_level": "MONITOR" if moved_away else "NORMAL",
+                }
             return {
+                "is_bed_exit": None,
                 "conclusion": "Resolved via multi-frame temporal reasoning.",
                 "state": "OUT_OF_BED" if "leave" in question.lower() else "SITTING_ON_BED",
                 "confidence": 0.88,

@@ -32,7 +32,7 @@ class EvaluationTests(unittest.TestCase):
                 if value
             },
         )
-        self.assertEqual(sum(duration_by_state.values()), 1200)
+        self.assertEqual(sum(duration_by_state.values()), ground_truth["observation_duration_sec"])
         self.assertEqual(ground_truth["bed_exit_times_sec"], [320, 912])
         self.assertEqual(ground_truth["bed_return_times_sec"], [582, 1155])
 
@@ -64,7 +64,7 @@ class EvaluationTests(unittest.TestCase):
             alert_reasoning="test",
         )
         ground_truth = {
-            "activity_duration_sec": {"lying_in_bed": 5, "walking": 5},
+            "activity_duration_sec": {"lying_in_bed": 5, "walking": 4.6},
             "bed_exit_count": 1,
             "bed_return_count": 0,
             "bed_exit_times_sec": [50],
@@ -78,6 +78,17 @@ class EvaluationTests(unittest.TestCase):
         metrics = EvaluationMetrics(report, ground_truth).compute_all()
 
         self.assertEqual(metrics["timeline_metrics"]["overall_accuracy"], 1.0)
+        self.assertEqual(
+            metrics["duration_metrics"]["per_state"]["walking"]["abs_error_sec"],
+            0.4,
+        )
+        self.assertEqual(
+            metrics["duration_metrics"]["mean_absolute_error_human"],
+            "0.2s",
+        )
+        self.assertIn("Mean Absolute Error: 0.2s", EvaluationMetrics(
+            report, ground_truth
+        ).format_report())
         self.assertEqual(
             metrics["timeline_metrics"]["confusion_matrix"],
             {"lying_in_bed": {"lying_in_bed": 5}, "walking": {"walking": 5}},

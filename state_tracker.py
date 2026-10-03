@@ -84,7 +84,7 @@ MIN_STABLE_FRAMES: Dict[ActivityState, int] = {
     ActivityState.SITTING_ON_BED: 2,
     ActivityState.SITTING_OUTSIDE_BED: 2,
     ActivityState.STANDING: 1,
-    ActivityState.WALKING: 1,
+    ActivityState.WALKING: 2,
     ActivityState.OUT_OF_BED: 2,
     ActivityState.UNKNOWN: 1,
 }
@@ -253,8 +253,12 @@ class TemporalStateTracker:
                     return
 
         # Commit transition
-        latest = self._pending_buffer[-1]
-        self._commit_transition(winning_state, latest.timestamp_sec, latest.frame_index)
+        first_winning = next(
+            fa for fa in self._pending_buffer if fa.state == winning_state
+        )
+        self._commit_transition(
+            winning_state, first_winning.timestamp_sec, first_winning.frame_index
+        )
 
     def _commit_transition(
         self,
