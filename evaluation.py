@@ -7,6 +7,8 @@ Supports comparison against ground truth annotations.
 
 import json
 import logging
+import math
+from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
@@ -141,7 +143,7 @@ class EvaluationMetrics:
         tolerance_sec: float = 30.0,
     ) -> Dict:
         """Compute precision/recall/F1 with temporal tolerance."""
-        if not gt_times or not pred_times:
+        if not gt_times:
             # Fall back to count-based
             tp = min(gt_count, pred_count)
             fp = max(0, pred_count - gt_count)
@@ -158,8 +160,8 @@ class EvaluationMetrics:
             fp = pred_count - tp
             fn = gt_count - tp
 
-        precision = tp / max(tp + fp, 1)
-        recall = tp / max(tp + fn, 1)
+        precision = tp / (tp + fp) if tp + fp else 0.0
+        recall = tp / (tp + fn) if tp + fn else 0.0
         f1 = 2 * precision * recall / max(precision + recall, 1e-9)
 
         return {
@@ -180,51 +182,61 @@ class EvaluationMetrics:
         if not gt_timeline:
             return {"note": "No ground truth timeline provided"}
 
-        video_dur = int(self.report.observation_duration_sec)
-
-        # Build second-by-second ground truth array
-        gt_array = [None] * (video_dur + 1)
-        for seg in gt_timeline:
-            start = int(seg.get("start_sec", 0))
-            end = int(seg.get("end_sec", video_dur))
-            state = seg.get("state", "unknown")
-            for t in range(start, min(end + 1, len(gt_array))):
-                gt_array[t] = state
-
-        # Build second-by-second prediction array
-        pred_array = [None] * (video_dur + 1)
-        for seg in self.report.timeline:
-            start = int(seg.start_sec)
-            end = int(seg.end_sec)
-            for t in range(start, min(end + 1, len(pred_array))):
-                pred_array[t] = seg.state.value
-
-        # Compute per-state accuracy
+        video_duration = self.report.observation_duration_sec
+        sample_count = math.ceil(video_duration)
+        confusion: Dict[str, Dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
         state_stats: Dict[str, Dict] = {}
         correct = 0
         total = 0
 
-        for t in range(video_dur + 1):
-            gt = gt_array[t]
-            pred = pred_array[t]
+        for second in range(sample_count):
+            timestamp = min(second + 0.5, max(0.0, video_duration - 1e-9))
+            gt = next(
+                (
+                    str(seg.get("state", "unknown")).lower()
+                    for seg in gt_timeline
+                    if float(seg.get("start_sec", 0)) <= timestamp
+                    < float(seg.get("end_sec", video_duration))
+                ),
+                None,
+            )
+            pred = next(
+                (
+                    seg.state.value
+                    for seg in self.report.timeline
+                    if seg.start_sec <= timestamp < seg.end_sec
+                ),
+                None,
+            )
             if gt is None:
                 continue
             total += 1
             state_stats.setdefault(gt, {"correct": 0, "total": 0})
             state_stats[gt]["total"] += 1
+            if pred is not None:
+                confusion[gt][pred] += 1
             if gt == pred:
                 correct += 1
                 state_stats[gt]["correct"] += 1
 
-        overall_accuracy = correct / max(total, 1)
+        overall_accuracy = correct / total if total else 0.0
         per_state_accuracy = {
-            state: round(v["correct"] / max(v["total"], 1), 3)
+            state: round(v["correct"] / v["total"], 3)
             for state, v in state_stats.items()
         }
 
         return {
             "overall_accuracy": round(overall_accuracy, 3),
             "per_state_accuracy": per_state_accuracy,
+            "confusion_matrix": {
+                gt_state: {
+                    pred_state: count
+                    for pred_state, count in sorted(predictions.items())
+                }
+                for gt_state, predictions in sorted(confusion.items())
+            },
             "evaluated_seconds": total,
         }
 
@@ -279,6 +291,11 @@ class EvaluationMetrics:
             lines.append("  Per-State Accuracy:")
             for state, acc in tm.get("per_state_accuracy", {}).items():
                 lines.append(f"    {state:<25} {acc:.1%}")
+            matrix = tm.get("confusion_matrix", {})
+            if matrix:
+                lines.append("  Confusion Matrix (ground truth rows → predicted columns):")
+                for gt_state, predictions in matrix.items():
+                    lines.append(f"    {gt_state}: {predictions}")
 
         return "\n".join(lines)
 

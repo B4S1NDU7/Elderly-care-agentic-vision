@@ -1,5 +1,5 @@
 """
-Elderly Care Agentic Vision System — CLI Entry Point
+Elderly Care Agentic Vision System - CLI Entry Point
 ======================================================
 Usage:
   python main.py --video VIDEO_PATH [OPTIONS]
@@ -7,7 +7,7 @@ Usage:
 Examples:
   python main.py --video input/room_footage.mp4
   python main.py --video input/room.mp4 --interval 3 --output results/
-  python main.py --video input/room.mp4 --gt ground_truth.json --evaluate
+  python main.py --video input/room.mp4 --gt ground_truth.json
 """
 
 import argparse
@@ -60,11 +60,6 @@ def parse_args():
         help="Path to ground truth JSON file for evaluation",
     )
     parser.add_argument(
-        "--evaluate",
-        action="store_true",
-        help="Run evaluation metrics",
-    )
-    parser.add_argument(
         "--no-pose",
         action="store_true",
         help="Disable pose estimation (faster but less accurate)",
@@ -84,7 +79,7 @@ def parse_args():
         "--temperature",
         type=float,
         default=0.1,
-        help="VLM temperature (default: 0.1 — more deterministic)",
+        help="VLM temperature (default: 0.1, more deterministic)",
     )
     parser.add_argument(
         "--quiet", "-q",
@@ -168,13 +163,13 @@ def main():
         report = pipeline.analyze(str(video_path))
 
         print(f"\nDone! Reports saved to: {config.output_dir}/")
-        print(f"  • activity_timeline.txt")
-        print(f"  • activity_summary.txt / activity_summary.json")
-        print(f"  • bed_events.json")
-        print(f"  • full_report.json")
-        print(f"  • evaluation_report.txt")
+        print("  - activity_timeline.txt")
+        print("  - activity_summary.txt / activity_summary.json")
+        print("  - bed_events.json")
+        print("  - full_report.json")
+        print("  - evaluation_report.txt")
         if config.enable_agentic_resolution:
-            print(f"  • agent_reasoning.txt")
+            print("  - agent_reasoning.txt")
 
         print(f"\nFinal Alert: {report.final_alert.value}")
         print(f"Final State: {report.final_state.value}")
