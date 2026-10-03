@@ -1,0 +1,108 @@
+{
+  "observation_duration_sec": 60.0,
+  "activity_duration_sec": {
+    "lying_in_bed": 27.0,
+    "sitting_on_bed": 8.0,
+    "standing": 2.0,
+    "walking": 13.0,
+    "sitting_outside_bed": 10.0,
+    "out_of_bed": 0.0,
+    "unknown": 0.0
+  },
+  "bed_exit_count": 1,
+  "bed_return_count": 1,
+  "total_in_bed_sec": 35.0,
+  "total_out_of_bed_sec": 25.0,
+  "longest_out_of_bed_period_sec": 25.0,
+  "final_state": "lying_in_bed",
+  "final_alert": "NORMAL",
+  "alert_reasoning": "Temporal state rule assessment: out_of_bed=25s, sitting_edge=8s.",
+  "timeline": [
+    {
+      "start": "00:00",
+      "end": "00:15",
+      "duration": "00:15",
+      "state": "lying_in_bed",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:15",
+      "end": "00:20",
+      "duration": "00:05",
+      "state": "sitting_on_bed",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:20",
+      "end": "00:22",
+      "duration": "00:02",
+      "state": "standing",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:22",
+      "end": "00:30",
+      "duration": "00:08",
+      "state": "walking",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:30",
+      "end": "00:40",
+      "duration": "00:10",
+      "state": "sitting_outside_bed",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:40",
+      "end": "00:45",
+      "duration": "00:05",
+      "state": "walking",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:45",
+      "end": "00:48",
+      "duration": "00:03",
+      "state": "sitting_on_bed",
+      "confidence": 0.94
+    },
+    {
+      "start": "00:48",
+      "end": "01:00",
+      "duration": "00:12",
+      "state": "lying_in_bed",
+      "confidence": 0.94
+    }
+  ],
+  "bed_events": [
+    {
+      "event": "bed_exit",
+      "start_time": "00:00:20",
+      "confirmed_time": "00:00:22",
+      "previous_state": "sitting_on_bed",
+      "current_state": "walking",
+      "confidence": 0.92,
+      "decision": "MONITOR",
+      "context_reasoning": "Person transitioned from sitting_on_bed \u2192 walking at 22s. This confirms a bed exit."
+    },
+    {
+      "event": "bed_return",
+      "start_time": "00:00:20",
+      "confirmed_time": "00:00:45",
+      "previous_state": "walking",
+      "current_state": "sitting_on_bed",
+      "confidence": 0.88,
+      "decision": "NORMAL",
+      "context_reasoning": "Person returned to bed after 25s out of bed. Transition: walking \u2192 sitting_on_bed."
+    }
+  ],
+  "processing_stats": {
+    "frames_analyzed": 61,
+    "total_frames": 600,
+    "processing_time_sec": 4.6,
+    "sample_interval_sec": 1.0,
+    "vlm_model": "gpt-4o",
+    "agentic_decisions": 1
+  }
+}

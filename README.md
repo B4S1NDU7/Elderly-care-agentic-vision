@@ -336,13 +336,14 @@ times for the exact video being evaluated before treating metrics as evidence.
 python -m unittest discover -s tests -v
 ```
 
-`sample_output/` contains reports from an offline, deterministic 60-second
-synthetic smoke test using the normal pose-enabled, agent-enabled pipeline.
-That run achieved 98.3% activity accuracy, 1/1 matched bed exits, and 1/1
-matched bed returns at the annotation's 3-second event tolerance. The
-synthetic scene encodes its activities with simple shapes/colors, so these
-metrics validate pipeline wiring and evaluation only; they are not evidence
-of accuracy on real footage or the difficult failure cases below.
+`sample_output/synthetic_ground_truth.json` provides labels for the
+deterministic 60-second synthetic demo. The synthetic scene encodes its
+activities with simple shapes/colors, so its evaluation validates pipeline
+wiring only; it is not evidence of accuracy on real footage or the difficult
+failure cases below.
+The checked-in run reports 100% activity accuracy and 1/1 matched bed exits
+and returns at the annotation's 3-second tolerance; these are synthetic-only
+smoke-test results.
 
 To reproduce the annotated mock evaluation, generate the synthetic video and
 run:
@@ -430,7 +431,12 @@ Elderly-care-agentic-vision/
 ├── ground_truth_template.json # GT annotation format
 ├── architecture.png           # Architecture diagram
 ├── sample_output/              # Offline synthetic smoke-test reports
-│   └── synthetic_ground_truth.json
+│   ├── synthetic_ground_truth.json
+│   ├── activity_timeline.txt
+│   ├── activity_summary.txt / activity_summary.json
+│   ├── bed_events.json / full_report.json
+│   ├── evaluation_report.txt
+│   └── agent_reasoning.txt
 └── output/                    # Generated reports (created at runtime)
     ├── activity_timeline.txt
     ├── activity_summary.txt

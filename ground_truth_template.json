@@ -13,19 +13,20 @@
   },
   "bed_exit_count": 2,
   "bed_return_count": 2,
-  "bed_exit_times_sec": [308, 780],
-  "bed_return_times_sec": [550, 1050],
+  "bed_exit_times_sec": [320, 912],
+  "bed_return_times_sec": [562, 1016],
   "timeline": [
     {"start_sec": 0,   "end_sec": 272, "state": "lying_in_bed"},
     {"start_sec": 272, "end_sec": 308, "state": "sitting_on_bed"},
     {"start_sec": 308, "end_sec": 320, "state": "standing"},
-    {"start_sec": 320, "end_sec": 461, "state": "walking"},
-    {"start_sec": 461, "end_sec": 555, "state": "sitting_outside_bed"},
-    {"start_sec": 555, "end_sec": 582, "state": "walking"},
-    {"start_sec": 582, "end_sec": 601, "state": "sitting_on_bed"},
-    {"start_sec": 601, "end_sec": 900, "state": "lying_in_bed"},
-    {"start_sec": 900, "end_sec": 960, "state": "walking"},
-    {"start_sec": 960, "end_sec": 1155, "state": "out_of_bed"},
-    {"start_sec": 1155,"end_sec": 1200,"state": "lying_in_bed"}
+    {"start_sec": 320, "end_sec": 467, "state": "walking"},
+    {"start_sec": 467, "end_sec": 562, "state": "sitting_outside_bed"},
+    {"start_sec": 562, "end_sec": 654, "state": "sitting_on_bed"},
+    {"start_sec": 654, "end_sec": 900, "state": "lying_in_bed"},
+    {"start_sec": 900, "end_sec": 912, "state": "standing"},
+    {"start_sec": 912, "end_sec": 932, "state": "walking"},
+    {"start_sec": 932, "end_sec": 977, "state": "unknown"},
+    {"start_sec": 977, "end_sec": 1016, "state": "standing"},
+    {"start_sec": 1016, "end_sec": 1200, "state": "lying_in_bed"}
   ]
 }
