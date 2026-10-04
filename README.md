@@ -292,48 +292,65 @@ All outputs are saved to the `output/` directory:
 
 ### `activity_timeline.txt`
 ```
-00:00 – 11:42    LYING_IN_BED              (11m 42s) 🛏
-11:42 – 13:50    SITTING_ON_BED            (2m 08s) 🛏
-13:50 – 14:53    STANDING                  (1m 03s)
-14:53 – 17:40    WALKING                   (2m 47s) 🚶
-17:40 – 19:15    SITTING_OUTSIDE_BED       (1m 35s)
-19:15 – 20:00    LYING_IN_BED              (45s) 🛏
+00:00 – 00:15    LYING_IN_BED              (15s)
+00:15 – 00:20    SITTING_ON_BED            (5s)
+00:20 – 00:22    STANDING                  (2s)
+00:22 – 00:30    WALKING                   (8s)
+00:30 – 00:40    SITTING_OUTSIDE_BED       (10s)
+00:40 – 00:45    WALKING                   (5s)
+00:45 – 00:48    SITTING_ON_BED            (3s)
+00:48 – 01:00    LYING_IN_BED              (12s)
 ```
 
 ### `activity_summary.json`
 ```json
 {
-  "total_observation_time": "20m 00s",
+  "total_observation_time": "1m 00s",
   "activity_summary": {
-    "lying_in_bed": "11m 42s",
-    "sitting_on_bed": "2m 08s",
-    "sitting_outside_bed": "1m 35s",
-    "standing": "1m 03s",
-    "walking": "2m 47s",
-    "unknown": "45s"
+    "lying_in_bed": "27s",
+    "sitting_on_bed": "8s",
+    "standing": "2s",
+    "walking": "13s",
+    "sitting_outside_bed": "10s",
+    "out_of_bed": "0s",
+    "unknown": "0s"
   },
   "bed_summary": {
-    "time_in_bed": "13m 50s",
-    "time_out_of_bed": "6m 10s",
-    "bed_exit_count": 2,
-    "bed_return_count": 2
-  }
+    "time_in_bed": "35s",
+    "time_out_of_bed": "25s",
+    "bed_exit_count": 1,
+    "bed_return_count": 1,
+    "longest_out_of_bed": "25s"
+  },
+  "final_state": "lying_in_bed",
+  "alert_level": "NORMAL",
+  "alert_reasoning": "Temporal state rule assessment: out_of_bed=25s, sitting_edge=8s."
 }
 ```
 
 ### `bed_events.json`
 ```json
 {
-  "bed_exit_count": 2,
+  "bed_exit_count": 1,
+  "bed_return_count": 1,
   "events": [
     {
       "event": "bed_exit",
-      "start_time": "00:05:08",
-      "confirmed_time": "00:05:20",
+      "start_time": "00:00:20",
+      "confirmed_time": "00:00:22",
       "previous_state": "sitting_on_bed",
       "current_state": "walking",
       "confidence": 0.92,
       "decision": "MONITOR"
+    },
+    {
+      "event": "bed_return",
+      "start_time": "00:00:20",
+      "confirmed_time": "00:00:45",
+      "previous_state": "walking",
+      "current_state": "sitting_on_bed",
+      "confidence": 0.88,
+      "decision": "NORMAL"
     }
   ]
 }
@@ -343,17 +360,37 @@ All outputs are saved to the `output/` directory:
 Complete machine-readable report with all fields:
 ```json
 {
-  "observation_duration_sec": 1200,
-  "activity_duration_sec": { ... },
-  "bed_exit_count": 2,
-  "bed_return_count": 2,
-  "total_in_bed_sec": 830,
-  "total_out_of_bed_sec": 370,
-  "longest_out_of_bed_period_sec": 241,
+  "observation_duration_sec": 60.0,
+  "activity_duration_sec": {
+    "lying_in_bed": 27.0,
+    "sitting_on_bed": 8.0,
+    "standing": 2.0,
+    "walking": 13.0,
+    "sitting_outside_bed": 10.0,
+    "out_of_bed": 0.0,
+    "unknown": 0.0
+  },
+  "bed_exit_count": 1,
+  "bed_return_count": 1,
+  "total_in_bed_sec": 35.0,
+  "total_out_of_bed_sec": 25.0,
+  "longest_out_of_bed_period_sec": 25.0,
   "final_state": "lying_in_bed",
   "final_alert": "NORMAL",
-  "timeline": [ ... ],
-  "bed_events": [ ... ]
+  "timeline": [
+    {"start": "00:00", "end": "00:15", "duration": "00:15", "state": "lying_in_bed", "confidence": 0.94},
+    {"start": "00:15", "end": "00:20", "duration": "00:05", "state": "sitting_on_bed", "confidence": 0.94},
+    {"start": "00:20", "end": "00:22", "duration": "00:02", "state": "standing", "confidence": 0.94},
+    {"start": "00:22", "end": "00:30", "duration": "00:08", "state": "walking", "confidence": 0.94},
+    {"start": "00:30", "end": "00:40", "duration": "00:10", "state": "sitting_outside_bed", "confidence": 0.94},
+    {"start": "00:40", "end": "00:45", "duration": "00:05", "state": "walking", "confidence": 0.94},
+    {"start": "00:45", "end": "00:48", "duration": "00:03", "state": "sitting_on_bed", "confidence": 0.94},
+    {"start": "00:48", "end": "01:00", "duration": "00:12", "state": "lying_in_bed", "confidence": 0.94}
+  ],
+  "bed_events": [
+    {"event": "bed_exit", "start_time": "00:00:20", "confirmed_time": "00:00:22", "previous_state": "sitting_on_bed", "current_state": "walking", "confidence": 0.92, "decision": "MONITOR"},
+    {"event": "bed_return", "start_time": "00:00:20", "confirmed_time": "00:00:45", "previous_state": "walking", "current_state": "sitting_on_bed", "confidence": 0.88, "decision": "NORMAL"}
+  ]
 }
 ```
 
