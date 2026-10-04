@@ -148,35 +148,45 @@ rule-triggered `MONITOR` or `ALERT`.
 ## Installation
 
 ### Prerequisites
-- Python 3.9+
-- OpenAI API key with GPT-4o access
+- Git
+- Python 3.9+ (Python 3.10 or 3.11 recommended)
+- An OpenAI API key with access to the selected vision model is required only
+  for live analysis; mock mode works without a key.
 
-### Setup
+### Windows PowerShell setup
+
+Open PowerShell in the folder where you want the project, then run:
+
+```powershell
+git clone https://github.com/B4S1NDU7/Elderly-care-agentic-vision.git
+Set-Location .\Elderly-care-agentic-vision
+
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Using the virtual-environment Python directly avoids PowerShell activation
+policy issues. If `py -3.11` is unavailable, install Python 3.10 or 3.11 and
+use the matching launcher, for example `py -3.10`.
+
+### macOS / Linux setup
 
 ```bash
-# Clone repository
-git clone https://github.com/YOUR_USERNAME/Elderly-care-agentic-vision.git
+git clone https://github.com/B4S1NDU7/Elderly-care-agentic-vision.git
 cd Elderly-care-agentic-vision
-
-# Create virtual environment
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up API key
-cp .env.example .env
-# Edit .env and add your OpenAI API key:
-# OPENAI_API_KEY=sk-your-key-here
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
 ---
 
 ## Usage
+
+For a clean-clone setup guide with Windows, macOS/Linux, offline demo, live
+video, evaluation, and test commands, see [RUN_INSTRUCTIONS.md](./RUN_INSTRUCTIONS.md).
 
 ### Basic Analysis
 
@@ -205,9 +215,58 @@ python main.py \
 
 ### Demo (Synthetic Video)
 
+This runs offline and needs no API key. From the repository root:
+
 ```bash
-python demo.py --api-key sk-your-key --duration 120
+python demo.py --duration 60 --mock --interval 1 --output-dir demo_output
 ```
+
+The demo creates `demo_video.mp4` and writes reports into `demo_output/`.
+To evaluate the generated video against the matching bundled synthetic labels:
+
+```bash
+python main.py --video demo_video.mp4 --mock --interval 1 \
+  --gt sample_output/synthetic_ground_truth.json \
+  --output evaluation_output
+```
+
+On Windows, replace `python` with `.\.venv\Scripts\python.exe` in the commands
+above and below.
+
+### Analyze your own video with the live vision model
+
+Create a local `.env` file from the template and add your key:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Set `OPENAI_API_KEY=your_key_here` in `.env`, save it, then run:
+
+```powershell
+.\.venv\Scripts\python.exe .\main.py `
+  --video .\path\to\your_video.mp4 `
+  --output .\output `
+  --interval 2
+```
+
+The first pose-enabled run may download YOLO model weights if they are not
+already available, so internet access may be needed. The `.env` file contains
+a secret and must not be committed. Use `--mock` for offline testing; mock
+results are not a substitute for real-video evaluation.
+
+### Optional: run the notebook
+
+Jupyter is not required for the CLI. To use the notebook, install JupyterLab
+and start it from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install jupyterlab
+.\.venv\Scripts\python.exe -m jupyter lab
+```
+
+Open `demo.ipynb` in the browser and run its cells in order.
 
 ### CLI Options
 
