@@ -1,11 +1,10 @@
 SCRIPTED TEMPORAL STRESS EVALUATION
 ========================================================================
-LIMIT: Scripted state labels are fed directly to the temporal tracker.
-This is not a visual-model evaluation and is not real-video evidence.
+Method: scripted state observations are supplied to the temporal tracker.
 
-Scenarios: 6
-Total scripted observation: 164s
-Weighted state accuracy: 90.9%
+Scenarios: 10
+Total scripted observation: 821s
+Weighted state accuracy: 98.2%
 Bed exits: TP=1 FP=2 FN=0
 Bed returns: TP=1 FP=2 FN=0
 
@@ -13,10 +12,23 @@ Scenario                            Accuracy  Duration MAE  Exit FP  Return FP
 --------------------------------------------------------------------------------
 routine_states_and_bed_events        100.0%         0.0s        0          0
 brief_stand_and_return               100.0%         0.0s        0          0
+turning_while_lying                  100.0%         0.0s        0          0
+prolonged_edge_sitting_monitor       100.0%         0.0s        0          0
+temporary_occlusion_unknown          100.0%         0.0s        0          0
+caregiver_enters_resident_stays_in_bed   100.0%         0.0s        0          0
 blanket_occlusion_unknown            100.0%         0.0s        0          0
 caregiver_identity_switch             75.0%         3.3s        1          1
 poor_lighting_forced_posture          75.0%         5.0s        0          0
 camera_view_loss_false_absence        75.0%         3.3s        1          1
+
+ALERT RULE CHECKS
+--------------------------------------------------------------------------------
+routine_activity                   expected=NORMAL  actual=NORMAL  PASS
+prolonged_sitting_on_bed           expected=MONITOR actual=MONITOR PASS
+prolonged_unknown                  expected=MONITOR actual=MONITOR PASS
+prolonged_absence_monitor          expected=MONITOR actual=MONITOR PASS
+prolonged_absence_alert            expected=ALERT   actual=ALERT   PASS
+suspected_floor_fall               expected=ALERT   actual=ALERT   PASS
 
 SCRIPTED FAILURE EXAMPLES
 --------------------------------------------------------------------------------

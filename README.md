@@ -132,7 +132,7 @@ Triggered when:
 - Person is classified as `SITTING_ON_BED` for **> 10 minutes**. This is a
   conservative proxy; the current detector cannot distinguish edge from
   middle-of-bed sitting.
-- `UNKNOWN` activity accumulates for more than 30 seconds
+- Current state is `UNKNOWN`, or accumulated `UNKNOWN` duration exceeds 30 seconds
 - The longest confirmed out-of-bed period exceeds 20 minutes
 
 ### ALERT
@@ -411,13 +411,15 @@ Run the deterministic temporal stress suite with:
 python scenario_evaluation.py --output sample_output
 ```
 
-It exercises routine transitions, brief standing without exit, UNKNOWN during
-blanket occlusion, and injected label errors representing caregiver identity
-switch, poor lighting, and camera-view loss. The latest scripted run covers
-164 seconds across six scenarios and reports 90.9% weighted state accuracy,
-two false bed exits, and two false returns. These inputs are scripted state
-labels sent directly to the tracker: the stress suite measures temporal
-tracking behavior, not the VLM, pose model, or camera perception.
+It covers the assignment's difficult situations with ten scripted scenarios,
+including turning while lying, sitting up, prolonged bed sitting, brief
+standing without exit, bed exit/return, chair sitting, walking, blanket and
+temporary occlusion, caregiver entry/identity confusion, poor lighting, and
+camera-view loss. It also checks six NORMAL/MONITOR/ALERT rule conditions.
+The latest run covers 821 seconds across the scenarios and reports 98.2%
+weighted state accuracy, two false bed exits, and two false returns.
+All six alert-rule checks pass. Observations are scripted state labels sent to
+the tracker.
 See [sample_output/challenging_case_evaluation.json](./sample_output/challenging_case_evaluation.json)
 and [sample_output/failure_case_examples.md](./sample_output/failure_case_examples.md)
 for per-case results.
@@ -496,6 +498,7 @@ function and should be tuned against the care setting before deployment.
 Elderly-care-agentic-vision/
 ├── main.py                    # CLI entry point
 ├── demo.py                    # Demo with synthetic video
+├── demo.ipynb                 # Interactive demo
 ├── pipeline.py                # Main orchestrator
 ├── models.py                  # Data models & types
 ├── video_extractor.py         # Frame extraction
@@ -506,6 +509,7 @@ Elderly-care-agentic-vision/
 ├── report_generator.py        # Output generation
 ├── evaluation.py              # Metrics computation
 ├── scenario_evaluation.py    # Scripted temporal stress scenarios
+├── RUN_INSTRUCTIONS.md       # Fresh-clone setup and run guide
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # API key template
 ├── ground_truth_template.json # GT annotation format
@@ -519,6 +523,7 @@ Elderly-care-agentic-vision/
 │   ├── agent_reasoning.txt
 │   ├── challenging_case_evaluation.json
 │   └── failure_case_examples.md
+└── tests/                     # Tracker, evaluation, and stress-suite tests
 └── output/                    # Generated reports (created at runtime)
     ├── activity_timeline.txt
     ├── activity_summary.txt

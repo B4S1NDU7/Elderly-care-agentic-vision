@@ -1,10 +1,10 @@
 {
   "evaluation_type": "scripted_temporal_stress_test",
-  "important_limit": "Inputs are scripted state labels. This suite tests temporal tracking and event logic, not image recognition, pose estimation, or VLM accuracy.",
+  "evaluation_scope": "Scripted state observations test temporal tracking and event logic. Alert checks exercise the configured rule-based decision thresholds.",
   "aggregate": {
-    "scenario_count": 6,
-    "evaluated_seconds": 164,
-    "weighted_activity_accuracy": 0.909,
+    "scenario_count": 10,
+    "evaluated_seconds": 821,
+    "weighted_activity_accuracy": 0.982,
     "bed_exit_true_positives": 1,
     "bed_exit_false_positives": 2,
     "bed_exit_false_negatives": 0,
@@ -152,6 +152,179 @@
         {
           "start_sec": 16.0,
           "end_sec": 24.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "turning_while_lying",
+      "description": "Turning over in bed remains LYING_IN_BED throughout the observation.",
+      "observation_duration_sec": 12,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 12.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "prolonged_edge_sitting_monitor",
+      "description": "Prolonged bed-edge sitting triggers the configured MONITOR threshold.",
+      "observation_duration_sec": 615,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0,
+        "sitting_on_bed": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 5.0,
+          "state": "lying_in_bed"
+        },
+        {
+          "start_sec": 5.0,
+          "end_sec": 615.0,
+          "state": "sitting_on_bed"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "temporary_occlusion_unknown",
+      "description": "A temporary occlusion is labeled UNKNOWN until the person is visible again.",
+      "observation_duration_sec": 15,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "walking": 0.0,
+        "unknown": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 5.0,
+          "state": "walking"
+        },
+        {
+          "start_sec": 5.0,
+          "end_sec": 8.0,
+          "state": "unknown"
+        },
+        {
+          "start_sec": 8.0,
+          "end_sec": 15.0,
+          "state": "walking"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "caregiver_enters_resident_stays_in_bed",
+      "description": "The resident remains in bed when a caregiver enters the scene.",
+      "observation_duration_sec": 15,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 15.0,
           "state": "lying_in_bed"
         }
       ],
@@ -427,6 +600,68 @@
         }
       ],
       "scripted_labels_not_image_model_output": true
+    }
+  ],
+  "alert_rule_checks": [
+    {
+      "name": "routine_activity",
+      "expected": "NORMAL",
+      "out_of_bed_duration_sec": 0,
+      "sitting_on_edge_duration_sec": 0,
+      "unknown_duration_sec": 0,
+      "fall_suspected": false,
+      "actual": "NORMAL",
+      "passed": true
+    },
+    {
+      "name": "prolonged_sitting_on_bed",
+      "expected": "MONITOR",
+      "out_of_bed_duration_sec": 0,
+      "sitting_on_edge_duration_sec": 601,
+      "unknown_duration_sec": 0,
+      "fall_suspected": false,
+      "actual": "MONITOR",
+      "passed": true
+    },
+    {
+      "name": "prolonged_unknown",
+      "expected": "MONITOR",
+      "out_of_bed_duration_sec": 0,
+      "sitting_on_edge_duration_sec": 0,
+      "unknown_duration_sec": 31,
+      "fall_suspected": false,
+      "actual": "MONITOR",
+      "passed": true
+    },
+    {
+      "name": "prolonged_absence_monitor",
+      "expected": "MONITOR",
+      "out_of_bed_duration_sec": 1201,
+      "sitting_on_edge_duration_sec": 0,
+      "unknown_duration_sec": 0,
+      "fall_suspected": false,
+      "actual": "MONITOR",
+      "passed": true
+    },
+    {
+      "name": "prolonged_absence_alert",
+      "expected": "ALERT",
+      "out_of_bed_duration_sec": 2701,
+      "sitting_on_edge_duration_sec": 0,
+      "unknown_duration_sec": 0,
+      "fall_suspected": false,
+      "actual": "ALERT",
+      "passed": true
+    },
+    {
+      "name": "suspected_floor_fall",
+      "expected": "ALERT",
+      "out_of_bed_duration_sec": 0,
+      "sitting_on_edge_duration_sec": 0,
+      "unknown_duration_sec": 0,
+      "fall_suspected": true,
+      "actual": "ALERT",
+      "passed": true
     }
   ]
 }
