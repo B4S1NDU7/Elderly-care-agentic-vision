@@ -1,0 +1,432 @@
+{
+  "evaluation_type": "scripted_temporal_stress_test",
+  "important_limit": "Inputs are scripted state labels. This suite tests temporal tracking and event logic, not image recognition, pose estimation, or VLM accuracy.",
+  "aggregate": {
+    "scenario_count": 6,
+    "evaluated_seconds": 164,
+    "weighted_activity_accuracy": 0.909,
+    "bed_exit_true_positives": 1,
+    "bed_exit_false_positives": 2,
+    "bed_exit_false_negatives": 0,
+    "bed_return_true_positives": 1,
+    "bed_return_false_positives": 2,
+    "bed_return_false_negatives": 0
+  },
+  "scenarios": [
+    {
+      "name": "routine_states_and_bed_events",
+      "description": "Turning while lying, sitting up, standing, walking, leaving, chair sitting, and returning to bed.",
+      "observation_duration_sec": 60,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0,
+        "sitting_on_bed": 0.0,
+        "sitting_outside_bed": 0.0,
+        "standing": 0.0,
+        "walking": 0.0,
+        "out_of_bed": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 1,
+        "predicted_count": 1,
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 1,
+        "predicted_count": 1,
+        "true_positives": 1,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 8.0,
+          "state": "lying_in_bed"
+        },
+        {
+          "start_sec": 8.0,
+          "end_sec": 14.0,
+          "state": "sitting_on_bed"
+        },
+        {
+          "start_sec": 14.0,
+          "end_sec": 16.0,
+          "state": "standing"
+        },
+        {
+          "start_sec": 16.0,
+          "end_sec": 25.0,
+          "state": "walking"
+        },
+        {
+          "start_sec": 25.0,
+          "end_sec": 31.0,
+          "state": "out_of_bed"
+        },
+        {
+          "start_sec": 31.0,
+          "end_sec": 39.0,
+          "state": "sitting_outside_bed"
+        },
+        {
+          "start_sec": 39.0,
+          "end_sec": 43.0,
+          "state": "walking"
+        },
+        {
+          "start_sec": 43.0,
+          "end_sec": 47.0,
+          "state": "sitting_on_bed"
+        },
+        {
+          "start_sec": 47.0,
+          "end_sec": 60.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "brief_stand_and_return",
+      "description": "The person sits up, briefly stands, and returns to bed without moving away.",
+      "observation_duration_sec": 24,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0,
+        "sitting_on_bed": 0.0,
+        "standing": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 6.0,
+          "state": "lying_in_bed"
+        },
+        {
+          "start_sec": 6.0,
+          "end_sec": 10.0,
+          "state": "sitting_on_bed"
+        },
+        {
+          "start_sec": 10.0,
+          "end_sec": 12.0,
+          "state": "standing"
+        },
+        {
+          "start_sec": 12.0,
+          "end_sec": 16.0,
+          "state": "sitting_on_bed"
+        },
+        {
+          "start_sec": 16.0,
+          "end_sec": 24.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "blanket_occlusion_unknown",
+      "description": "Partial blanket occlusion is labeled UNKNOWN until the person is visible again.",
+      "observation_duration_sec": 20,
+      "activity_accuracy": 1.0,
+      "duration_mae_sec": 0.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0,
+        "unknown": 0.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 5.0,
+          "state": "lying_in_bed"
+        },
+        {
+          "start_sec": 5.0,
+          "end_sec": 10.0,
+          "state": "unknown"
+        },
+        {
+          "start_sec": 10.0,
+          "end_sec": 20.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "caregiver_identity_switch",
+      "description": "Injected classifier failure: during resident occlusion, a caregiver is mistaken for the resident.",
+      "observation_duration_sec": 20,
+      "activity_accuracy": 0.75,
+      "duration_mae_sec": 3.3,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0,
+        "sitting_outside_bed": 5.0,
+        "unknown": 5.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 1,
+        "true_positives": 0,
+        "false_positives": 1,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 1,
+        "true_positives": 0,
+        "false_positives": 1,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 5.0,
+          "state": "lying_in_bed"
+        },
+        {
+          "start_sec": 5.0,
+          "end_sec": 10.0,
+          "state": "sitting_outside_bed"
+        },
+        {
+          "start_sec": 10.0,
+          "end_sec": 20.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [
+        {
+          "time_sec": 5,
+          "expected": "unknown",
+          "observed": "sitting_outside_bed"
+        },
+        {
+          "time_sec": 6,
+          "expected": "unknown",
+          "observed": "sitting_outside_bed"
+        },
+        {
+          "time_sec": 7,
+          "expected": "unknown",
+          "observed": "sitting_outside_bed"
+        },
+        {
+          "time_sec": 8,
+          "expected": "unknown",
+          "observed": "sitting_outside_bed"
+        },
+        {
+          "time_sec": 9,
+          "expected": "unknown",
+          "observed": "sitting_outside_bed"
+        }
+      ],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "poor_lighting_forced_posture",
+      "description": "Injected classifier failure: uncertain dark frames are forced to LYING_IN_BED instead of UNKNOWN.",
+      "observation_duration_sec": 20,
+      "activity_accuracy": 0.75,
+      "duration_mae_sec": 5.0,
+      "duration_errors_sec": {
+        "lying_in_bed": 5.0,
+        "unknown": 5.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 20.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [
+        {
+          "time_sec": 5,
+          "expected": "unknown",
+          "observed": "lying_in_bed"
+        },
+        {
+          "time_sec": 6,
+          "expected": "unknown",
+          "observed": "lying_in_bed"
+        },
+        {
+          "time_sec": 7,
+          "expected": "unknown",
+          "observed": "lying_in_bed"
+        },
+        {
+          "time_sec": 8,
+          "expected": "unknown",
+          "observed": "lying_in_bed"
+        },
+        {
+          "time_sec": 9,
+          "expected": "unknown",
+          "observed": "lying_in_bed"
+        }
+      ],
+      "scripted_labels_not_image_model_output": true
+    },
+    {
+      "name": "camera_view_loss_false_absence",
+      "description": "Injected classifier failure: temporary loss of view is misread as OUT_OF_BED.",
+      "observation_duration_sec": 20,
+      "activity_accuracy": 0.75,
+      "duration_mae_sec": 3.3,
+      "duration_errors_sec": {
+        "lying_in_bed": 0.0,
+        "out_of_bed": 5.0,
+        "unknown": 5.0
+      },
+      "bed_exit_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 1,
+        "true_positives": 0,
+        "false_positives": 1,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "bed_return_metrics": {
+        "ground_truth_count": 0,
+        "predicted_count": 1,
+        "true_positives": 0,
+        "false_positives": 1,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "predicted_timeline": [
+        {
+          "start_sec": 0.0,
+          "end_sec": 5.0,
+          "state": "lying_in_bed"
+        },
+        {
+          "start_sec": 5.0,
+          "end_sec": 10.0,
+          "state": "out_of_bed"
+        },
+        {
+          "start_sec": 10.0,
+          "end_sec": 20.0,
+          "state": "lying_in_bed"
+        }
+      ],
+      "observed_label_mismatches": [
+        {
+          "time_sec": 5,
+          "expected": "unknown",
+          "observed": "out_of_bed"
+        },
+        {
+          "time_sec": 6,
+          "expected": "unknown",
+          "observed": "out_of_bed"
+        },
+        {
+          "time_sec": 7,
+          "expected": "unknown",
+          "observed": "out_of_bed"
+        },
+        {
+          "time_sec": 8,
+          "expected": "unknown",
+          "observed": "out_of_bed"
+        },
+        {
+          "time_sec": 9,
+          "expected": "unknown",
+          "observed": "out_of_bed"
+        }
+      ],
+      "scripted_labels_not_image_model_output": true
+    }
+  ]
+}

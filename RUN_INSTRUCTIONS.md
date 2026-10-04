@@ -157,6 +157,22 @@ The report includes activity accuracy and confusion matrix, per-state
 duration error, and bed-exit/return precision, recall, and F1. Synthetic
 evaluation results do not establish performance on real footage.
 
+### Run the temporal stress scenarios
+
+This runs six deterministic scripted state sequences through the temporal
+tracker and writes per-scenario metrics plus failure examples. It requires no
+video, API key, or additional dependency:
+
+```powershell
+.\.venv\Scripts\python.exe .\scenario_evaluation.py --output .\sample_output
+```
+
+The suite includes stand-and-return, correct UNKNOWN handling for blanket
+occlusion, and three injected label-error examples (caregiver identity switch,
+poor lighting, and camera-view loss). These test temporal tracking only; they
+do not evaluate visual recognition. Results are saved to
+`challenging_case_evaluation.json` and `failure_case_examples.md`.
+
 ## 6. Find the generated reports
 
 The selected output directory contains:

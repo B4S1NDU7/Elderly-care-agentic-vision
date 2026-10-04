@@ -48,6 +48,7 @@ Ground-truth evaluation runs only when `--gt` is provided. See the detailed
 | `report_generator.py` | Output generation: timeline, summary, events, evaluation |
 | `pipeline.py` | Main orchestrator coordinating all components |
 | `evaluation.py` | Ground-truth duration, event, and timeline metrics |
+| `scenario_evaluation.py` | Scripted temporal stress scenarios and failure reports |
 | `main.py` | CLI entry point |
 | `demo.py` | Demo with synthetic video generation |
 
@@ -404,6 +405,23 @@ The checked-in run reports 100% activity accuracy and 1/1 matched bed exits
 and returns at the annotation's 3-second tolerance; these are synthetic-only
 smoke-test results.
 
+Run the deterministic temporal stress suite with:
+
+```bash
+python scenario_evaluation.py --output sample_output
+```
+
+It exercises routine transitions, brief standing without exit, UNKNOWN during
+blanket occlusion, and injected label errors representing caregiver identity
+switch, poor lighting, and camera-view loss. The latest scripted run covers
+164 seconds across six scenarios and reports 90.9% weighted state accuracy,
+two false bed exits, and two false returns. These inputs are scripted state
+labels sent directly to the tracker: the stress suite measures temporal
+tracking behavior, not the VLM, pose model, or camera perception.
+See [sample_output/challenging_case_evaluation.json](./sample_output/challenging_case_evaluation.json)
+and [sample_output/failure_case_examples.md](./sample_output/failure_case_examples.md)
+for per-case results.
+
 To reproduce the annotated mock evaluation, generate the synthetic video and
 run:
 
@@ -419,22 +437,24 @@ python main.py --video demo_video.mp4 --mock --interval 1 \
 
 The system is designed to handle these difficult scenarios:
 
-These are failure-case scenarios to test, not claims that the supplied demo
-contains or successfully handles them:
+The scripted temporal stress report provides measured injected-label examples;
+these are not real-video or image-model failure measurements:
 
-1. **Brief standing then sitting back on the bed**: a bed-exit false positive
-   is possible if the VLM changes the state directly to a move-away label.
-2. **Caregiver enters while the resident is occluded**: the system may follow
-   the wrong person because persistent resident identity/re-identification is
-   not implemented.
-3. **Poor lighting or blanket occlusion**: posture and bed occupancy may be
-   unclear; `UNKNOWN` should be preferred, but model errors remain possible.
-4. **Temporary disappearance from camera view**: may be interpreted as
-   `OUT_OF_BED`; a camera-view/identity model is not implemented.
+1. **Caregiver during resident occlusion** (`caregiver_identity_switch`):
+   injected `sitting_outside_bed` instead of `unknown` produced 75% state
+   accuracy and one false bed exit plus one false return.
+2. **Poor lighting** (`poor_lighting_forced_posture`): injected
+   `lying_in_bed` instead of `unknown` produced 75% state accuracy and a
+   5-second duration MAE.
+3. **Temporary camera-view loss** (`camera_view_loss_false_absence`):
+   injected `out_of_bed` instead of `unknown` produced 75% state accuracy
+   and one false bed exit plus one false return.
+4. **Brief standing adjustment** (`brief_stand_and_return`): the scripted
+   stand-then-return sequence produced no false bed exit.
 
-Use difficult, labeled videos to determine whether each case is actually
-handled. `evaluation_report.txt` reports observed labels and metrics when
-ground truth is supplied; it cannot establish performance for untested cases.
+The scenarios show temporal handling consequences of supplied labels, not how
+the image models classify those real visual conditions. Test against difficult,
+manually labeled video before drawing conclusions about perception performance.
 
 ---
 
@@ -485,6 +505,7 @@ Elderly-care-agentic-vision/
 ├── agent.py                   # Agentic reasoning engine
 ├── report_generator.py        # Output generation
 ├── evaluation.py              # Metrics computation
+├── scenario_evaluation.py    # Scripted temporal stress scenarios
 ├── requirements.txt           # Python dependencies
 ├── .env.example               # API key template
 ├── ground_truth_template.json # GT annotation format
@@ -495,7 +516,9 @@ Elderly-care-agentic-vision/
 │   ├── activity_summary.txt / activity_summary.json
 │   ├── bed_events.json / full_report.json
 │   ├── evaluation_report.txt
-│   └── agent_reasoning.txt
+│   ├── agent_reasoning.txt
+│   ├── challenging_case_evaluation.json
+│   └── failure_case_examples.md
 └── output/                    # Generated reports (created at runtime)
     ├── activity_timeline.txt
     ├── activity_summary.txt
